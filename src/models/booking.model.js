@@ -62,6 +62,7 @@ const bookingSchema = new mongoose.Schema(
             phone: { type: String, required: true },
             numberOfPassengers: { type: Number, default: 1, min: 1 },
             numberOfSuitcases: { type: Number, default: 0, min: 0 },
+            numberOfChildren: { type: Number, default: 0, min: 0 },
         },
 
         // Booking for Someone Else
