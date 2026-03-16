@@ -38,7 +38,7 @@ export const validatePickupTime = (pickupDateTime, minimumMinutes = 30) => {
 /**
  * Calculate pricing for a booking
  * Uses the new tiered pricing system from the Pricing model
- * 
+ *
  * @param {Object} vehicle - Vehicle document
  * @param {number} distanceKm - Distance in kilometers
  * @param {number} durationMins - Duration in minutes
@@ -46,6 +46,7 @@ export const validatePickupTime = (pickupDateTime, minimumMinutes = 30) => {
  * @param {Date} pickupDateTime - Pickup date/time
  * @param {string} bookingType - 'p2p' or 'hourly'
  * @param {number} hours - Number of hours (for hourly booking)
+ * @param {Object} passengerDetails - Passenger details including numberOfChildren
  * @returns {Object} Pricing breakdown
  */
 export const calculatePricing = async (
@@ -55,7 +56,8 @@ export const calculatePricing = async (
   extras = [],
   pickupDateTime,
   bookingType = "p2p",
-  hours = 0
+  hours = 0,
+  passengerDetails = {}
 ) => {
   const distanceMiles = kmToMiles(distanceKm);
 
@@ -77,6 +79,9 @@ export const calculatePricing = async (
     );
   }
 
+  // Extract numberOfChildren from passengerDetails (default to 0)
+  const numberOfChildren = passengerDetails.numberOfChildren || 0;
+
   // Use the new pricing calculator
   const priceResult = calculateTotalPrice(pricing, {
     bookingType,
@@ -84,7 +89,7 @@ export const calculatePricing = async (
     hours: hours || Math.ceil(durationMins / 60),
     extras: {
       extraStops: extras.filter(e => e.name?.toLowerCase().includes('stop')).length,
-      childSeats: extras.filter(e => e.name?.toLowerCase().includes('seat') || e.name?.toLowerCase().includes('child')).reduce((sum, e) => sum + (e.quantity || 1), 0),
+      childSeats: numberOfChildren, // Use numberOfChildren from passengerDetails
     },
   });
 
@@ -103,6 +108,7 @@ export const calculatePricing = async (
     totalAmount: priceResult.grandTotal + extrasTotal,
     breakdown: priceResult.journey.breakdown,
     bookingType,
+    childSeatCharge: priceResult.extras.childSeatCharge, // Include child seat charge in breakdown
   };
 };
 
