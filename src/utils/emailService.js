@@ -38,10 +38,10 @@ const emailStyles = `
     body { 
         font-family: 'Segoe UI', Arial, sans-serif; 
         line-height: 1.6; 
-        color: #333; 
+        color: #1a1a1a; 
         margin: 0; 
         padding: 0;
-        background-color: #f5f5f5;
+        background-color: #1a1a1a;
     }
     .container { 
         max-width: 600px; 
@@ -49,167 +49,219 @@ const emailStyles = `
         background: #ffffff;
         border-radius: 12px;
         overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
     }
     .header { 
-        background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
-        color: white; 
-        padding: 30px 20px;
+        background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+        color: #D7B75E; 
+        padding: 28px 24px;
         text-align: center;
+        border-bottom: 3px solid #D7B75E;
+    }
+    .header-logo {
+        width: 90px;
+        height: auto;
+        display: block;
+        margin: 0 auto 14px;
     }
     .header h1 {
         margin: 0;
-        font-size: 28px;
+        font-size: 26px;
         font-weight: 600;
-        letter-spacing: 1px;
+        letter-spacing: 2px;
+        color: #D7B75E;
     }
     .header .tagline {
-        margin: 10px 0 0;
-        font-size: 14px;
-        opacity: 0.9;
-        letter-spacing: 2px;
+        margin: 8px 0 0;
+        font-size: 11px;
+        color: #E8D089;
+        opacity: 0.85;
+        letter-spacing: 3px;
         text-transform: uppercase;
     }
     .content { 
-        padding: 30px 25px;
+        padding: 28px 24px;
+        background: #ffffff;
     }
     .greeting {
-        font-size: 18px;
-        color: #1e3a5f;
+        font-size: 17px;
+        color: #1a1a1a;
         margin-bottom: 20px;
+        font-weight: 500;
     }
     .section { 
-        background: #f8fafc;
+        background: #fafafa;
         border-radius: 10px;
-        padding: 20px;
-        margin: 20px 0;
-        border-left: 4px solid #3182ce;
+        padding: 18px;
+        margin: 14px 0;
+        border-left: 4px solid #D7B75E;
     }
     .section-title {
-        font-size: 14px;
+        font-size: 12px;
         font-weight: 600;
-        color: #3182ce;
+        color: #B9994A;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 15px;
+        letter-spacing: 1.5px;
+        margin-bottom: 12px;
     }
     .detail-row {
         display: flex;
-        margin-bottom: 10px;
-        font-size: 14px;
+        margin-bottom: 6px;
+        font-size: 13px;
     }
     .detail-label {
-        color: #718096;
+        color: #888888;
         min-width: 140px;
     }
     .detail-value {
-        color: #2d3748;
+        color: #1a1a1a;
         font-weight: 500;
     }
     .price-box {
-        background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
-        color: white;
+        background: #1a1a1a;
+        color: #D7B75E;
         border-radius: 10px;
         padding: 20px;
         text-align: center;
-        margin: 20px 0;
+        margin: 18px 0;
+        border: 1px solid #D7B75E;
     }
     .price-label {
-        font-size: 14px;
+        font-size: 11px;
+        color: #E8D089;
         opacity: 0.9;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 2px;
     }
     .price-value {
-        font-size: 36px;
+        font-size: 38px;
         font-weight: 700;
-        margin: 5px 0;
+        color: #D7B75E;
+        margin: 8px 0;
+    }
+    .price-sub {
+        font-size: 12px;
+        color: #888888;
+        letter-spacing: 0.5px;
     }
     .booking-ref {
-        background: #ebf8ff;
-        border: 2px dashed #3182ce;
+        background: #fdf8ee;
+        border: 2px dashed #D7B75E;
         border-radius: 10px;
-        padding: 15px;
+        padding: 16px;
         text-align: center;
         margin: 20px 0;
     }
     .booking-ref-label {
-        font-size: 12px;
-        color: #718096;
+        font-size: 11px;
+        color: #B9994A;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 1.5px;
     }
     .booking-ref-value {
-        font-size: 24px;
+        font-size: 26px;
         font-weight: 700;
-        color: #2c5282;
-        letter-spacing: 2px;
+        color: #1a1a1a;
+        letter-spacing: 4px;
+        margin-top: 6px;
     }
     .cta-button {
         display: inline-block;
-        background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-        color: white;
-        padding: 14px 30px;
+        background: #D7B75E;
+        color: #1a1a1a;
+        padding: 14px 34px;
         border-radius: 8px;
         text-decoration: none;
-        font-weight: 600;
+        font-weight: 700;
+        font-size: 14px;
         text-align: center;
-        margin: 20px 0;
+        letter-spacing: 0.5px;
+        margin: 24px 0 8px;
+    }
+    .cta-button:hover {
+        background: #C5A54D;
     }
     .footer {
-        background: #f8fafc;
-        padding: 25px;
+        background: #1a1a1a;
+        padding: 22px 24px;
         text-align: center;
-        border-top: 1px solid #e2e8f0;
+        border-top: 1px solid #2e2e2e;
+    }
+    .footer-logo {
+        width: 40px;
+        height: auto;
+        display: block;
+        margin: 0 auto 10px;
+        opacity: 0.7;
+    }
+    .footer-brand {
+        font-size: 12px;
+        color: #D7B75E;
+        margin: 4px 0;
+        font-weight: 500;
     }
     .footer-text {
-        font-size: 13px;
-        color: #718096;
-        margin: 5px 0;
+        font-size: 12px;
+        color: #ffffff;
+        margin: 4px 0;
+    }
+    .footer-note {
+        font-size: 11px;
+        color: #a0aec0;
+        margin-top: 8px;
     }
     .contact-info {
-        margin-top: 15px;
-        font-size: 13px;
-        color: #4a5568;
+        font-size: 12px;
+        color: #ffffff;
+        margin: 8px 0;
     }
     .status-badge {
         display: inline-block;
-        padding: 6px 16px;
+        padding: 5px 16px;
         border-radius: 20px;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 1px;
-    }
-    .status-pending {
-        background: #fef3c7;
-        color: #92400e;
+        margin-top: 10px;
     }
     .status-confirmed {
-        background: #d1fae5;
-        color: #065f46;
+        background: #dcfce7;
+        color: #15803d;
+    }
+    .status-pending {
+        background: #fef9c3;
+        color: #854d0e;
     }
     .status-paid {
-        background: #d1fae5;
-        color: #065f46;
+        background: #dcfce7;
+        color: #15803d;
+    }
+    .highlight-box {
+        background: #fdf8ee;
+        border: 1px solid #E8D089;
+        border-radius: 8px;
+        padding: 14px;
+        margin: 14px 0;
+        font-size: 13px;
+        color: #7a5c1a;
+        line-height: 1.6;
     }
     .admin-alert {
         background: #fef2f2;
-        border-left-color: #ef4444;
-    }
-    .highlight-box {
-        background: #fffbeb;
-        border: 1px solid #fcd34d;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 15px 0;
+        border-left: 4px solid #ef4444;
+        border-radius: 0 8px 8px 0;
+        padding: 14px;
+        margin: 14px 0;
+        font-size: 13px;
+        color: #991b1b;
     }
     table {
         width: 100%;
         border-collapse: collapse;
     }
     td {
-        padding: 8px 0;
+        padding: 6px 0;
         vertical-align: top;
     }
 `;
@@ -564,7 +616,7 @@ export const sendBookingConfirmation = async (bookingData) => {
     <body>
         <div class="container">
             <div class="header" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
-                <h1>✅ BOOKING CONFIRMED</h1>
+                <h1> BOOKING CONFIRMED</h1>
                 <p class="tagline">Your journey is all set!</p>
             </div>
             
@@ -579,7 +631,7 @@ export const sendBookingConfirmation = async (bookingData) => {
                 </div>
                 
                 <div style="text-align: center; margin: 20px 0;">
-                    <span class="status-badge status-confirmed">✅ Confirmed & Paid</span>
+                    <span class="status-badge status-confirmed">Confirmed & Paid</span>
                 </div>
                 
                 <div class="section">
@@ -695,7 +747,7 @@ export const sendBookingConfirmation = async (bookingData) => {
     const mailOptions = {
         from: `"JK Executive" <${process.env.EMAIL_USER}>`,
         to: passenger.email,
-        subject: `✅ Booking Confirmed - ${bookingData.bookingNumber || "JK Executive"} | ${formatDate(bookingData.pickupDate)}`,
+        subject: ` Booking Confirmed - ${bookingData.bookingNumber || "JK Executive"} | ${formatDate(bookingData.pickupDate)}`,
         html: htmlContent,
     };
 
