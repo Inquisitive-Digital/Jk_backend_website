@@ -280,20 +280,20 @@ export const sendWelcomeEmail = async (bookingData) => {
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to JK Executive</title>
+        <title>Welcome to JK Executive Chauffeurs</title>
         <style>${emailStyles}</style>
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <h1>JK EXECUTIVE</h1>
+                <h1>JK EXECUTIVE CHAUFFEURS</h1>
                 <p class="tagline">Premium Chauffeur Services</p>
             </div>
             
             <div class="content">
                 <p class="greeting">Dear ${passenger.firstName || "Valued Customer"},</p>
                 
-                <p>Thank you for choosing <strong>JK Executive</strong> for your journey! We're delighted to have you on board.</p>
+                <p>Thank you for choosing <strong>JK Executive Chauffeurs</strong> for your journey! We're delighted to have you on board.</p>
                 
                 <p>Your booking details are being processed. Please complete your payment to confirm your reservation.</p>
                 
@@ -372,7 +372,7 @@ export const sendWelcomeEmail = async (bookingData) => {
             <div class="footer">
                 <p class="footer-text">Questions? We're here to help!</p>
                 <div class="contact-info">
-                    <strong>JK Executive</strong><br>
+                    <strong>JK Executive Chauffeurs</strong><br>
                     📞 Call us: +44 XXX XXX XXXX<br>
                     ✉️ Email: info@jkexecutive.co.uk
                 </div>
@@ -386,9 +386,9 @@ export const sendWelcomeEmail = async (bookingData) => {
     `;
 
     const mailOptions = {
-        from: `"JK Executive" <${process.env.EMAIL_USER}>`,
+        from: `"JK Executive Chauffeurs" <${process.env.EMAIL_USER}>`,
         to: passenger.email,
-        subject: `Welcome to JK Executive - Your Journey Awaits! 🚗`,
+        subject: `Welcome to JK Executive Chauffeurs - Your Journey Awaits! 🚗`,
         html: htmlContent,
     };
 
@@ -417,7 +417,7 @@ export const sendLeadNotificationToAdmin = async (bookingData) => {
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>New Lead - JK Executive</title>
+        <title>New Lead - JK Executive Chauffeurs</title>
         <style>${emailStyles}</style>
     </head>
     <body>
@@ -572,7 +572,7 @@ export const sendLeadNotificationToAdmin = async (bookingData) => {
             </div>
             
             <div class="footer">
-                <p class="footer-text">This is an automated notification from JK Executive Booking System</p>
+                <p class="footer-text">This is an automated notification from JK Executive Chauffeurs Booking System</p>
             </div>
         </div>
     </body>
@@ -580,7 +580,7 @@ export const sendLeadNotificationToAdmin = async (bookingData) => {
     `;
 
     const mailOptions = {
-        from: `"JK Executive System" <${process.env.EMAIL_USER}>`,
+        from: `"JK Executive Chauffeurs System" <${process.env.EMAIL_USER}>`,
         to: adminEmail,
         subject: `📋 New Lead - ${passenger.firstName || ""} ${passenger.lastName || ""} | ${bookingData.pickup?.address || bookingData.pickup || "Pickup"}`,
         html: htmlContent,
@@ -610,30 +610,30 @@ export const sendBookingConfirmation = async (bookingData) => {
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Booking Confirmed - JK Executive</title>
+        <title>Booking Confirmed - JK Executive Chauffeurs</title>
         <style>${emailStyles}</style>
     </head>
     <body>
         <div class="container">
-            <div class="header" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+            <div class="header" style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);">
                 <h1> BOOKING CONFIRMED</h1>
                 <p class="tagline">Your journey is all set!</p>
             </div>
-            
+
             <div class="content">
                 <p class="greeting">Dear ${passenger.firstName || "Valued Customer"},</p>
-                
-                <p>Great news! Your booking with <strong>JK Executive</strong> has been confirmed. We look forward to providing you with a premium travel experience.</p>
-                
+
+                <p>Great news! Your booking with <strong>JK Executive Chauffeurs</strong> has been confirmed. We look forward to providing you with a premium travel experience.</p>
+
                 <div class="booking-ref">
                     <div class="booking-ref-label">Your Booking Reference</div>
                     <div class="booking-ref-value">${bookingData.bookingNumber || "JK-XXXXXXX"}</div>
                 </div>
-                
+
                 <div style="text-align: center; margin: 20px 0;">
                     <span class="status-badge status-confirmed">Confirmed & Paid</span>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">📍 Journey Details</div>
                     <table>
@@ -662,7 +662,7 @@ export const sendBookingConfirmation = async (bookingData) => {
                         </tr>
                     </table>
                 </div>
-                
+
                 <div class="section">
                     <div class="section-title">🚗 Your Vehicle</div>
                     <table>
@@ -676,8 +676,8 @@ export const sendBookingConfirmation = async (bookingData) => {
                         </tr>
                     </table>
                 </div>
-                
-                <div class="price-box" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+
+                <div class="price-box" style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);">
                     <div class="price-label">Amount Paid</div>
                     <div class="price-value">${formatCurrency(bookingData.pricing?.totalPrice)}</div>
                     <div style="font-size: 12px; opacity: 0.9; margin-top: 5px;">Payment Received - Thank You!</div>
@@ -731,7 +731,7 @@ export const sendBookingConfirmation = async (bookingData) => {
             <div class="footer">
                 <p class="footer-text">Need to make changes? Contact us immediately.</p>
                 <div class="contact-info">
-                    <strong>JK Executive</strong><br>
+                    <strong>JK Executive Chauffeurs</strong><br>
                     📞 Call us: +44 XXX XXX XXXX<br>
                     ✉️ Email: info@jkexecutive.co.uk
                 </div>
@@ -745,9 +745,9 @@ export const sendBookingConfirmation = async (bookingData) => {
     `;
 
     const mailOptions = {
-        from: `"JK Executive" <${process.env.EMAIL_USER}>`,
+        from: `"JK Executive Chauffeurs" <${process.env.EMAIL_USER}>`,
         to: passenger.email,
-        subject: ` Booking Confirmed - ${bookingData.bookingNumber || "JK Executive"} | ${formatDate(bookingData.pickupDate)}`,
+        subject: ` Booking Confirmed - ${bookingData.bookingNumber || "JK Executive Chauffeurs"} | ${formatDate(bookingData.pickupDate)}`,
         html: htmlContent,
     };
 
@@ -776,27 +776,27 @@ export const sendNewBookingToAdmin = async (bookingData, paymentDetails = {}) =>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>New Booking - JK Executive</title>
+        <title>New Booking - JK Executive Chauffeurs</title>
         <style>${emailStyles}</style>
     </head>
     <body>
         <div class="container">
-            <div class="header" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+            <div class="header" style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);">
                 <h1>🎉 NEW ONLINE BOOKING</h1>
                 <p class="tagline">Payment Received - Action Required</p>
             </div>
-            
+
             <div class="content">
-                <div class="booking-ref" style="background: #d1fae5; border-color: #10b981;">
-                    <div class="booking-ref-label" style="color: #065f46;">Booking Reference</div>
-                    <div class="booking-ref-value" style="color: #059669;">${bookingData.bookingNumber || "JK-XXXXXXX"}</div>
+                <div class="booking-ref">
+                    <div class="booking-ref-label">Booking Reference</div>
+                    <div class="booking-ref-value">${bookingData.bookingNumber || "JK-XXXXXXX"}</div>
                 </div>
-                
+
                 <div style="text-align: center; margin: 20px 0;">
                     <span class="status-badge status-paid">💳 Payment Received</span>
                 </div>
-                
-                <div class="price-box" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+
+                <div class="price-box" style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);">
                     <div class="price-label">Amount Received</div>
                     <div class="price-value">${formatCurrency(bookingData.pricing?.totalPrice)}</div>
                     ${paymentDetails.paymentIntentId ? `
@@ -805,9 +805,9 @@ export const sendNewBookingToAdmin = async (bookingData, paymentDetails = {}) =>
                     </div>
                     ` : ""}
                 </div>
-                
-                <div class="section" style="border-left-color: #10b981;">
-                    <div class="section-title" style="color: #059669;">👤 Customer Details</div>
+
+                <div class="section">
+                    <div class="section-title">👤 Customer Details</div>
                     <table>
                         <tr>
                             <td class="detail-label">Name:</td>
@@ -972,9 +972,9 @@ export const sendNewBookingToAdmin = async (bookingData, paymentDetails = {}) =>
     `;
 
     const mailOptions = {
-        from: `"JK Executive Bookings" <${process.env.EMAIL_USER}>`,
+        from: `"JK Executive Chauffeurs Bookings" <${process.env.EMAIL_USER}>`,
         to: adminEmail,
-        subject: `🎉 New Online Booking - ${bookingData.bookingNumber || "JK Executive"} | ${formatCurrency(bookingData.pricing?.totalPrice)}`,
+        subject: `🎉 New Online Booking - ${bookingData.bookingNumber || "JK Executive Chauffeurs"} | ${formatCurrency(bookingData.pricing?.totalPrice)}`,
         html: htmlContent,
     };
 
@@ -1018,7 +1018,7 @@ export const sendContactInquiryToAdmin = async ({ name, email, phone, subject, m
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>New Contact Inquiry — JK Executive</title>
+        <title>New Contact Inquiry — JK Executive Chauffeurs</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -1262,9 +1262,9 @@ export const sendContactInquiryToAdmin = async ({ name, email, phone, subject, m
 
             <!-- Footer -->
             <div class="footer">
-                <div class="footer-logo">JK EXECUTIVE</div>
+                <div class="footer-logo">JK EXECUTIVE Chauffeurs</div>
                 <div class="divider"></div>
-                <p class="footer-text">This is an automated notification from the JK Executive contact form.</p>
+                <p class="footer-text">This is an automated notification from the JK Executive Chauffeurs contact form.</p>
                 <div class="footer-contact">
                     <a href="tel:+442034759906">+44 203 475 9906</a> &nbsp;·&nbsp;
                     <a href="mailto:info@jkexecutivechauffeurs.com">info@jkexecutivechauffeurs.com</a>
@@ -1277,7 +1277,7 @@ export const sendContactInquiryToAdmin = async ({ name, email, phone, subject, m
     `;
 
     const mailOptions = {
-        from: `"JK Executive — Contact Form" <${process.env.EMAIL_USER}>`,
+        from: `"JK Executive Chauffeurs — Contact Form" <${process.env.EMAIL_USER}>`,
         to: adminEmail,
         replyTo: email,
         subject: `New Inquiry: ${subjectLabel} — ${name}`,
@@ -1313,7 +1313,7 @@ export const sendBulkQuoteRequestToAdmin = async ({ name, email, enquiry }) => {
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>New Bulk Quote Request — JK Executive</title>
+        <title>New Bulk Quote Request — JK Executive Chauffeurs</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -1497,7 +1497,7 @@ export const sendBulkQuoteRequestToAdmin = async ({ name, email, enquiry }) => {
             </div>
 
             <div class="footer">
-                <div class="footer-logo">JK EXECUTIVE</div>
+                <div class="footer-logo">JK EXECUTIVE CHAUFFEURS</div>
                 <div class="divider"></div>
                 <p class="footer-text">Automated notification — Bulk &amp; Corporate Booking form.</p>
                 <div class="footer-contact">
@@ -1511,7 +1511,7 @@ export const sendBulkQuoteRequestToAdmin = async ({ name, email, enquiry }) => {
     `;
 
     const mailOptions = {
-        from: `"JK Executive — Quote Request" <${process.env.EMAIL_USER}>`,
+        from: `"JK Executive Chauffeurs — Quote Request" <${process.env.EMAIL_USER}>`,
         to: adminEmail,
         replyTo: email,
         subject: `New Bulk Booking Quote Request — ${name}`,
