@@ -422,7 +422,7 @@ export const sendLeadNotificationToAdmin = async (bookingData) => {
     </head>
     <body>
         <div class="container">
-            <div class="header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+            <div class="header" style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);">
                 <h1>📋 NEW LEAD RECEIVED</h1>
                 <p class="tagline">Action Required - Pending Payment</p>
             </div>
