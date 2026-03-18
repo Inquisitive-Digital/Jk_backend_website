@@ -49,10 +49,24 @@ export const createPaymentIntent = async (req, res) => {
 
         console.log(`Payment mode: ${isTestMode ? 'TEST' : 'LIVE'} | Origin: ${origin}`);
 
-        // Extract passenger and booking details
+        // Extract data from nested structure
+        const selectedVehicle = bookingData?.selectedVehicle || {};
         const passengerDetails = bookingData?.passengerDetails || {};
-        const pricing = bookingData?.pricing || {};
-        const vehicleDetails = bookingData?.selectedVehicle || {};
+        const pricing = selectedVehicle?.pricing || {};
+        const vehicleDetails = selectedVehicle || {};
+
+        // Calculate child seat charge
+        const numberOfChildren = passengerDetails?.numberOfChildren || 0;
+        const childSeatPrice = pricing?.additionalCharges?.childSeatPrice || 0;
+        const childSeatCharge = numberOfChildren * childSeatPrice;
+
+        // Calculate final amount with child seat charge
+        let finalAmount = amount;
+        if (childSeatCharge > 0) {
+            finalAmount = amount + childSeatCharge;
+            console.log(`Child seat charge: ${numberOfChildren} children × £${childSeatPrice} = £${childSeatCharge}`);
+            console.log(`Total: £${amount} + £${childSeatCharge} = £${finalAmount}`);
+        }
 
         // Build customer name
         const customerName = `${passengerDetails.firstName || ''} ${passengerDetails.lastName || ''}`.trim();
@@ -90,6 +104,7 @@ export const createPaymentIntent = async (req, res) => {
                         firstName: passengerDetails.firstName || '',
                         lastName: passengerDetails.lastName || '',
                         numberOfPassengers: String(passengerDetails.numberOfPassengers || 1),
+                        numberOfChildren: String(numberOfChildren || 0),
                         numberOfSuitcases: String(passengerDetails.numberOfSuitcases || 0),
                     },
                 };
@@ -117,6 +132,7 @@ export const createPaymentIntent = async (req, res) => {
             customer_email: customerEmail,
             customer_phone: customerPhone,
             number_of_passengers: String(passengerDetails.numberOfPassengers || 1),
+            number_of_children: String(numberOfChildren || 0),
             number_of_suitcases: String(passengerDetails.numberOfSuitcases || 0),
 
             // Journey Details
@@ -172,7 +188,7 @@ export const createPaymentIntent = async (req, res) => {
 
         // Payment Intent options
         const paymentIntentOptions = {
-            amount: Math.round(amount * 100), // Stripe expects amount in smallest currency unit 
+            amount: Math.round(finalAmount * 100), // Stripe expects amount in smallest currency unit (pence)
             currency,
             automatic_payment_methods: {
                 enabled: true,
