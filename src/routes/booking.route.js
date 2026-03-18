@@ -25,10 +25,10 @@ router.get("/", protectAdmin, getAllBookings);
 router.get("/:id", protectAdmin, getBooking);
 
 // Update booking status (admin action)
-router.patch("/:id/status", protectAdmin, updateBookingStatus);
+router.patch("/:id/status", updateBookingStatus);
 
 // Update booking details (admin edits)
-router.put("/:id/details", protectAdmin, updateBookingDetails);
+router.put("/:id/details", updateBookingDetails);
 
 // Delete booking (admin only)
 router.delete("/:id", protectAdmin, deleteBooking);
