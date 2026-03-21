@@ -300,20 +300,6 @@ export const getNavMenu = async (req, res) => {
         const menu = categoryOrder.map((cat) => {
             const categoryServices = grouped[cat] || [];
 
-            // For "Airport Travel" — inject airports as children
-            if (cat === "Airport Travel") {
-                const airportChildren = airports.map((a) => ({
-                    label: a.iataCode ? `${a.name}` : a.name,
-                    href: `/services/airport-transfers`,
-                }));
-
-                return {
-                    label: cat,
-                    href: categoryServices.length > 0 ? categoryServices[0].href : "/services",
-                    children: airportChildren,
-                };
-            }
-
             // For categories with multiple services — show as sub-dropdown
             if (categoryServices.length > 1) {
                 return {
