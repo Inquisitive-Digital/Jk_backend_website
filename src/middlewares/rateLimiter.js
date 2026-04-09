@@ -1,11 +1,23 @@
 import rateLimit from "express-rate-limit";
 import jwt from "jsonwebtoken";
 
+// Allowed origins (must match server.js corsOptions)
+const ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:5000",
+    "http://127.0.0.1:5173",
+    "https://jk-frontend-nine.vercel.app",
+    "https://jkexecutivechauffeurs.com",
+    "https://www.jkexecutivechauffeurs.com",
+    "http://jkexecutivechauffeurs.com/",
+];
+
 /**
  * Global Rate Limiter
  * - Allows 1000 requests per 15-minute window per IP
  * - Admins with a valid JWT token are completely exempt from rate limiting
  * - Returns 429 with a friendly JSON message if limit is exceeded
+ * - Ensures CORS headers are present even on rate-limit responses
  */
 export const apiRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -36,7 +48,15 @@ export const apiRateLimiter = rateLimit({
         success: false,
         message: "Too many requests from this IP. Please try again after 15 minutes.",
     },
+
+    // IMPORTANT: manually set CORS headers so the browser can read this error response.
+    // Without this, the browser shows a misleading "CORS policy" error instead of 429.
     handler: (req, res, next, options) => {
+        const origin = req.headers.origin;
+        if (origin && ALLOWED_ORIGINS.includes(origin)) {
+            res.setHeader("Access-Control-Allow-Origin", origin);
+            res.setHeader("Access-Control-Allow-Credentials", "true");
+        }
         res.status(429).json(options.message);
     },
 });
