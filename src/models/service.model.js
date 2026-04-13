@@ -55,6 +55,19 @@ const serviceSchema = new mongoose.Schema(
             },
         ],
 
+        // SEO Meta
+        meta_title: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+
+        meta_description: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+
         // Admin control
         isActive: {
             type: Boolean,
