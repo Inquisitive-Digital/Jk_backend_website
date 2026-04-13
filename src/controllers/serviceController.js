@@ -7,7 +7,7 @@ import { deleteFile } from "../middlewares/multer.js";
 // @access  Admin
 export const createService = async (req, res) => {
     try {
-        const { title, subtitle, category, slug, description, longDescription, features, isActive, priority } = req.body;
+        const { title, subtitle, category, slug, description, longDescription, features, isActive, priority, meta_title, meta_description } = req.body;
 
         // Build image object
         let image = {};
@@ -50,6 +50,8 @@ export const createService = async (req, res) => {
             features: parsedFeatures || [],
             isActive: isActive !== undefined ? isActive : true,
             priority: priority || 0,
+            meta_title: meta_title || "",
+            meta_description: meta_description || "",
         });
 
         res.status(201).json({
@@ -167,7 +169,7 @@ export const updateService = async (req, res) => {
             });
         }
 
-        const { title, subtitle, category, slug, description, longDescription, features, isActive, priority } = req.body;
+        const { title, subtitle, category, slug, description, longDescription, features, isActive, priority, meta_title, meta_description } = req.body;
 
         // Update fields
         if (title) service.title = title;
@@ -178,6 +180,8 @@ export const updateService = async (req, res) => {
         if (longDescription !== undefined) service.longDescription = longDescription;
         if (isActive !== undefined) service.isActive = isActive;
         if (priority !== undefined) service.priority = priority;
+        if (meta_title !== undefined) service.meta_title = meta_title;
+        if (meta_description !== undefined) service.meta_description = meta_description;
 
         // Parse and update features
         if (features) {

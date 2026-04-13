@@ -102,6 +102,18 @@ const fleetSchema = new mongoose.Schema(
             default: "",
         },
 
+        meta_title: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+
+        meta_description: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+
         // ----- Admin Control -----
         isActive: {
             type: Boolean,

@@ -10,7 +10,7 @@ export const createFleet = async (req, res) => {
             title, subtitle, slug, description, longDescription,
             specifications, features, vehicleId,
             passengers, luggage, seoTitle, seoDescription,
-            isActive, priority,
+            isActive, priority, meta_title, meta_description,
         } = req.body;
 
         // Build hero image
@@ -70,6 +70,8 @@ export const createFleet = async (req, res) => {
             seoDescription: seoDescription || "",
             isActive: isActive !== undefined ? isActive : true,
             priority: parseInt(priority) || 0,
+            meta_title: meta_title || "",
+            meta_description: meta_description || "",
         });
 
         res.status(201).json({ success: true, message: "Fleet entry created", fleet });
@@ -207,7 +209,7 @@ export const updateFleet = async (req, res) => {
             title, subtitle, slug, description, longDescription,
             specifications, features, vehicleId,
             passengers, luggage, seoTitle, seoDescription,
-            isActive, priority,
+            isActive, priority, meta_title, meta_description,
         } = req.body;
 
         if (title) fleet.title = title;
@@ -220,6 +222,8 @@ export const updateFleet = async (req, res) => {
         if (luggage !== undefined) fleet.luggage = parseInt(luggage);
         if (seoTitle !== undefined) fleet.seoTitle = seoTitle;
         if (seoDescription !== undefined) fleet.seoDescription = seoDescription;
+        if (meta_title !== undefined) fleet.meta_title = meta_title;
+        if (meta_description !== undefined) fleet.meta_description = meta_description;
         if (isActive !== undefined) fleet.isActive = isActive;
         if (priority !== undefined) fleet.priority = parseInt(priority);
 
