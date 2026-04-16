@@ -68,6 +68,13 @@ const serviceSchema = new mongoose.Schema(
             default: "",
         },
 
+        // JSON-LD structured data (script tag content for SEO)
+        script: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+
         // Admin control
         isActive: {
             type: Boolean,
