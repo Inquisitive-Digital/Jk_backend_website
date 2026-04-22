@@ -31,6 +31,9 @@ import blogRoutes from "./src/routes/blog.route.js";
 import contactRoutes from "./src/routes/contact.route.js";
 import faqRoutes from "./src/routes/faq.route.js";
 import Blog from "./src/models/blog.model.js";
+import { Service } from "./src/models/service.model.js";
+import Event from "./src/models/event.model.js";
+import { Fleet } from "./src/models/fleet.model.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -91,6 +94,27 @@ const injectMeta = (template, metaTags, preloadScript = "") => {
     .replace(/<title>[^<]*<\/title>/, metaTags)
     .replace("</head>", `${preloadScript}</head>`);
 };
+
+// SSR: / (Home Page)
+app.get("/", async (req, res, next) => {
+  try {
+    const template = getIndexTemplate();
+    const metaTags = `
+      <title>Chauffeur Service in London | Travel In Style & Comfort | JK Executive</title>
+      <meta name="description" content="Premium chauffeur services in London and across the UK. Professional drivers for airport transfers, business travel, and special events. Book your luxury ride today." />
+      <meta property="og:title" content="Chauffeur Service in London | JK Executive Chauffeurs" />
+      <meta property="og:description" content="Luxury chauffeur services for airport transfers, corporate travel and events in London." />
+      <meta property="og:image" content="${SITE_URL}/logo.png" />
+      <meta property="og:url" content="${SITE_URL}/" />
+      <meta property="og:type" content="website" />
+      <link rel="canonical" href="${SITE_URL}/" />`;
+
+    const finalHtml = injectMeta(template, metaTags);
+    return res.status(200).set({ "Content-Type": "text/html" }).end(finalHtml);
+  } catch (err) {
+    return next();
+  }
+});
 
 // SSR: /blog/:slug — Blog detail page (most important for Google indexing)
 app.get("/blog/:slug", async (req, res, next) => {
@@ -156,6 +180,141 @@ app.get("/blog", async (req, res, next) => {
     console.error("SSR error for /blog →", err.message);
     return next();
   }
+});
+
+// SSR: /services/:slug — Service detail page
+app.get("/services/:slug", async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    const service = await Service.findOne({ slug, isActive: true }).lean();
+    if (!service) return next();
+
+    const template = getIndexTemplate();
+    const seoTitle = service.meta_title || service.title;
+    const seoDesc = service.meta_description || service.description || "";
+    const imgUrl = service.image?.url || `${SITE_URL}/logo.png`;
+
+    const metaTags = `
+      <title>${seoTitle}</title>
+      <meta name="description" content="${seoDesc.replace(/"/g, "&quot;")}" />
+      <meta property="og:title" content="${seoTitle.replace(/"/g, "&quot;")}" />
+      <meta property="og:description" content="${seoDesc.replace(/"/g, "&quot;")}" />
+      <meta property="og:image" content="${imgUrl}" />
+      <meta property="og:url" content="${SITE_URL}/services/${slug}" />
+      <link rel="canonical" href="${SITE_URL}/services/${slug}" />`;
+
+    const finalHtml = injectMeta(template, metaTags);
+    return res.status(200).set({ "Content-Type": "text/html" }).end(finalHtml);
+  } catch (err) {
+    console.error("SSR error for /services/:slug →", err.message);
+    return next();
+  }
+});
+
+// SSR: /events/:slug — Event detail page
+app.get("/events/:slug", async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    const event = await Event.findOne({ slug, isActive: true }).lean();
+    if (!event) return next();
+
+    const template = getIndexTemplate();
+    const seoTitle = event.seoTitle || event.title;
+    const seoDesc = event.seoDescription || event.description || "";
+    const imgUrl = event.heroImageUrl || event.heroImage?.url || `${SITE_URL}/logo.png`;
+
+    const metaTags = `
+      <title>${seoTitle}</title>
+      <meta name="description" content="${seoDesc.replace(/"/g, "&quot;")}" />
+      <meta property="og:title" content="${seoTitle.replace(/"/g, "&quot;")}" />
+      <meta property="og:description" content="${seoDesc.replace(/"/g, "&quot;")}" />
+      <meta property="og:image" content="${imgUrl}" />
+      <meta property="og:url" content="${SITE_URL}/events/${slug}" />
+      <link rel="canonical" href="${SITE_URL}/events/${slug}" />`;
+
+    const finalHtml = injectMeta(template, metaTags);
+    return res.status(200).set({ "Content-Type": "text/html" }).end(finalHtml);
+  } catch (err) {
+    console.error("SSR error for /events/:slug →", err.message);
+    return next();
+  }
+});
+
+// SSR: /fleet — Fleet listing page
+app.get("/fleet", async (req, res, next) => {
+  try {
+    const template = getIndexTemplate();
+    const metaTags = `
+      <title>Our Luxury Fleet | JK Executive Chauffeurs</title>
+      <meta name="description" content="Explore our premium fleet of luxury vehicles, including Mercedes E-Class, S-Class, and V-Class, for your comfortable travel in London." />
+      <meta property="og:title" content="Our Luxury Fleet | JK Executive Chauffeurs" />
+      <meta property="og:description" content="Premium vehicles for airport transfers and corporate travel in London." />
+      <meta property="og:url" content="${SITE_URL}/fleet" />
+      <link rel="canonical" href="${SITE_URL}/fleet" />`;
+
+    const finalHtml = injectMeta(template, metaTags);
+    return res.status(200).set({ "Content-Type": "text/html" }).end(finalHtml);
+  } catch (err) {
+    return next();
+  }
+});
+
+// SSR: /fleet/:slug — Fleet detail page
+app.get("/fleet/:slug", async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    const vehicle = await Fleet.findOne({ slug, isActive: true }).lean();
+    if (!vehicle) return next();
+
+    const template = getIndexTemplate();
+    const seoTitle = vehicle.seoTitle || vehicle.meta_title || vehicle.title;
+    const seoDesc = vehicle.seoDescription || vehicle.meta_description || vehicle.description || "";
+    const imgUrl = vehicle.heroImage?.url || `${SITE_URL}/logo.png`;
+
+    const metaTags = `
+      <title>${seoTitle}</title>
+      <meta name="description" content="${seoDesc.replace(/"/g, "&quot;")}" />
+      <meta property="og:title" content="${seoTitle.replace(/"/g, "&quot;")}" />
+      <meta property="og:description" content="${seoDesc.replace(/"/g, "&quot;")}" />
+      <meta property="og:image" content="${imgUrl}" />
+      <meta property="og:url" content="${SITE_URL}/fleet/${slug}" />
+      <link rel="canonical" href="${SITE_URL}/fleet/${slug}" />`;
+
+    const finalHtml = injectMeta(template, metaTags);
+    return res.status(200).set({ "Content-Type": "text/html" }).end(finalHtml);
+  } catch (err) {
+    console.error("SSR error for /fleet/:slug →", err.message);
+    return next();
+  }
+});
+
+// SSR: Static Informational Pages
+const staticPages = [
+  { path: "/about", title: "About Us | JK Executive Chauffeurs", desc: "Learn more about our premium chauffeur services and our commitment to luxury and professional travel." },
+  { path: "/contact", title: "Contact Us | Book Your Luxury Chauffeur", desc: "Get in touch with us for bookings, inquiries, and custom travel arrangements in London and the UK." },
+  { path: "/terms-and-conditions", title: "Terms & Conditions | JK Executive Chauffeurs", desc: "Our terms of service and booking conditions." },
+  { path: "/privacy-policy", title: "Privacy Policy | Your Data Security", desc: "How we protect and manage your personal information." },
+  { path: "/gdpr-policy", title: "GDPR Policy | Data Protection Compliance", desc: "Our compliance with General Data Protection Regulation." }
+];
+
+staticPages.forEach(page => {
+  app.get(page.path, async (req, res, next) => {
+    try {
+      const template = getIndexTemplate();
+      const metaTags = `
+        <title>${page.title}</title>
+        <meta name="description" content="${page.desc}" />
+        <meta property="og:title" content="${page.title}" />
+        <meta property="og:description" content="${page.desc}" />
+        <meta property="og:url" content="${SITE_URL}${page.path}" />
+        <link rel="canonical" href="${SITE_URL}${page.path}" />`;
+
+      const finalHtml = injectMeta(template, metaTags);
+      return res.status(200).set({ "Content-Type": "text/html" }).end(finalHtml);
+    } catch (err) {
+      return next();
+    }
+  });
 });
 
 // ================================================================
