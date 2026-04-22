@@ -544,9 +544,9 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
   // Step 3: Check if pickup or dropoff is a special location (airport, stadium, etc.)
   // Each location has its own radiusKm configured by admin
 
-  // Helper function to calculate distance between two coordinates (Haversine formula)
+  // Helper: Haversine distance between two lat/lng points (returns km)
   const getDistanceKm = (lat1, lng1, lat2, lng2) => {
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
     const a =
@@ -554,7 +554,21 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
       Math.sin(dLng / 2) * Math.sin(dLng / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in km
+    return R * c;
+  };
+
+  // Helper: Ray-casting point-in-polygon test
+  const isPointInPolygon = (lat, lng, polygonCoords) => {
+    let inside = false;
+    const n = polygonCoords.length;
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+      const xi = polygonCoords[i].lat, yi = polygonCoords[i].lng;
+      const xj = polygonCoords[j].lat, yj = polygonCoords[j].lng;
+      const intersect = ((yi > lng) !== (yj > lng)) &&
+        (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
   };
 
   // Get all active special locations
@@ -563,11 +577,27 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
   let pickupLocation_special = null;
   let dropoffLocation_special = null;
 
-  // Check each location to see if pickup/dropoff falls within its radius
+  // Check each location to see if pickup/dropoff falls within its zone
   for (const location of allLocations) {
-    const locationRadius = location.radiusKm || 5; // Default 5km if not set
+    const zone = location.zoneShape;
 
-    // Check pickup
+    // --- Polygon zone detection ---
+    if (zone?.type === "polygon" && zone.coordinates?.length >= 3) {
+      if (!pickupLocation_special) {
+        if (isPointInPolygon(pickupLocation.coordinates.lat, pickupLocation.coordinates.lng, zone.coordinates)) {
+          pickupLocation_special = location;
+        }
+      }
+      if (!dropoffLocation_special) {
+        if (isPointInPolygon(dropoffLocation.coordinates.lat, dropoffLocation.coordinates.lng, zone.coordinates)) {
+          dropoffLocation_special = location;
+        }
+      }
+      continue; // polygon takes priority, skip radius check for this location
+    }
+
+    // --- Circle / radius fallback ---
+    const locationRadius = location.radiusKm || 5;
     if (!pickupLocation_special && location.coordinates?.lat && location.coordinates?.lng) {
       const pickupDistance = getDistanceKm(
         pickupLocation.coordinates.lat,
@@ -579,8 +609,6 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
         pickupLocation_special = location;
       }
     }
-
-    // Check dropoff
     if (!dropoffLocation_special && location.coordinates?.lat && location.coordinates?.lng) {
       const dropoffDistance = getDistanceKm(
         dropoffLocation.coordinates.lat,
