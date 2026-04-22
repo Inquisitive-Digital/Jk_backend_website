@@ -41,6 +41,22 @@ const serviceSchema = new mongoose.Schema(
             default: "",
         },
 
+        // STRUCTURED CONTENT — same pattern as blog.model.js
+        // Each section: heading (H2), subheading (H3), paragraph text (HTML, supports <a> links),
+        // bullet list items (HTML), and an optional inline image
+        sections: [
+            {
+                heading:    { type: String, trim: true },      // H2
+                subheading: { type: String, trim: true },       // H3 (optional)
+                text:       { type: String },                   // paragraph HTML (supports <a>, <b>, etc.)
+                listItems:  [{ type: String }],                 // bullet points (HTML)
+                image: {
+                    url: { type: String },
+                    alt: { type: String },
+                },
+            },
+        ],
+
         // Service Image
         image: {
             url: { type: String, required: true },
