@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config(); 
+dotenv.config();
 
 console.log("Environment Variables Loaded:");
 console.log("MONGO_URI exists:", process.env.MONGO_URI ? "YES" : "NO");
@@ -55,8 +55,10 @@ app.use(cookieParser());
 // rate limiter 
 app.use(apiRateLimiter);
 
-// Serve static files from uploads directory
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Serve static files from uploads directory (Images)
+app.use("/uploads", express.static(path.join(__dirname, "uploads"), {
+  maxAge: "1y" // Cache images for 1 year
+}));
 
 
 // Routes setup
@@ -321,9 +323,16 @@ staticPages.forEach(page => {
 // END SSR ROUTES
 // ================================================================
 
-
-// React Frontend Static Files
-app.use(express.static(path.join(__dirname, "dist")));
+// React Frontend Static Files (JS, CSS, Images from dist/)
+app.use(express.static(path.join(__dirname, "dist"), {
+  maxAge: "1y", // Cache static assets for 1 year
+  setHeaders: (res, path) => {
+    // DO NOT cache the dynamic index.html so updates are visible immediately!
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 
 app.use((req, res) => {
