@@ -92,9 +92,18 @@ const getIndexTemplate = () => {
 
 // Helper: inject meta tags and optional preload script into HTML
 const injectMeta = (template, metaTags, preloadScript = "") => {
-  return template
-    .replace(/<title>[^<]*<\/title>/, metaTags)
-    .replace("</head>", `${preloadScript}</head>`);
+  let html = template;
+
+  // 1. Remove any <title> that might be inside an HTML comment  <!-- ... <title>...</title> ... -->
+  html = html.replace(/<!--[\s\S]*?<title>[^<]*<\/title>[\s\S]*?-->/g, "");
+
+  // 2. Remove any remaining bare <title>...</title> tag
+  html = html.replace(/<title>[^<]*<\/title>/, "");
+
+  // 3. Inject the new meta tags (including <title>) + preload script right before </head>
+  html = html.replace("</head>", `${metaTags}\n${preloadScript}</head>`);
+
+  return html;
 };
 
 // SSR: / (Home Page)
