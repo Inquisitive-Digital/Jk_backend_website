@@ -10,6 +10,7 @@ const ALLOWED_ORIGINS = [
     "https://jkexecutivechauffeurs.com",
     "https://www.jkexecutivechauffeurs.com",
     "http://jkexecutivechauffeurs.com/",
+    "http://dev.jkexecutivechauffeurs.com",
 ];
 
 /**
