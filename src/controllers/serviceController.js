@@ -7,7 +7,7 @@ import { deleteFile } from "../middlewares/multer.js";
 // @access  Admin
 export const createService = async (req, res) => {
     try {
-        const { title, subtitle, category, slug, description, longDescription, features, isActive, priority, meta_title, meta_description } = req.body;
+        const { title, subtitle, category, slug, description, longDescription, features, sections, script, isActive, priority, meta_title, meta_description } = req.body;
 
         // Build image object
         let image = {};
@@ -39,6 +39,16 @@ export const createService = async (req, res) => {
             }
         }
 
+        // Parse sections if sent as JSON string
+        let parsedSections = sections;
+        if (typeof sections === "string") {
+            try {
+                parsedSections = JSON.parse(sections);
+            } catch {
+                parsedSections = [];
+            }
+        }
+
         const service = await Service.create({
             title,
             subtitle,
@@ -48,6 +58,8 @@ export const createService = async (req, res) => {
             longDescription: longDescription || "",
             image,
             features: parsedFeatures || [],
+            sections: parsedSections || [],
+            script: script || "",
             isActive: isActive !== undefined ? isActive : true,
             priority: priority || 0,
             meta_title: meta_title || "",
@@ -169,7 +181,7 @@ export const updateService = async (req, res) => {
             });
         }
 
-        const { title, subtitle, category, slug, description, longDescription, features, isActive, priority, meta_title, meta_description } = req.body;
+        const { title, subtitle, category, slug, description, longDescription, features, sections, script, isActive, priority, meta_title, meta_description } = req.body;
 
         // Update fields
         if (title) service.title = title;
@@ -182,6 +194,7 @@ export const updateService = async (req, res) => {
         if (priority !== undefined) service.priority = priority;
         if (meta_title !== undefined) service.meta_title = meta_title;
         if (meta_description !== undefined) service.meta_description = meta_description;
+        if (script !== undefined) service.script = script;
 
         // Parse and update features
         if (features) {
@@ -194,6 +207,19 @@ export const updateService = async (req, res) => {
                 }
             }
             service.features = parsedFeatures;
+        }
+
+        // Parse and update sections
+        if (sections !== undefined) {
+            let parsedSections = sections;
+            if (typeof sections === "string") {
+                try {
+                    parsedSections = JSON.parse(sections);
+                } catch {
+                    parsedSections = [];
+                }
+            }
+            service.sections = parsedSections;
         }
 
         // Update image if new one uploaded
