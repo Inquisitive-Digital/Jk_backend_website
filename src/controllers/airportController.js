@@ -1,4 +1,5 @@
 import { Airport } from "../models/airport.model.js";
+import { AirportPricing } from "../models/airportPricing.model.js";
 import { TryCatch } from "../middlewares/error.js";
 
 // -----------------------------------------------------------------------------
@@ -13,6 +14,10 @@ export const createAirport = TryCatch(async (req, res, next) => {
         icaoCode,
         coordinates,
         zone,
+        locationType,
+        radiusKm,
+        zoneShape,
+        isActive,
     } = req.body;
 
     // Validate required fields
@@ -34,7 +39,7 @@ export const createAirport = TryCatch(async (req, res, next) => {
         }
     }
 
-    // Create airport
+    // Create airport — include ALL fields sent from the admin form
     const airport = await Airport.create({
         name,
         address,
@@ -43,7 +48,10 @@ export const createAirport = TryCatch(async (req, res, next) => {
         icaoCode,
         coordinates,
         zone: zone || "Entire UK Cover",
-        isActive: true,
+        locationType: locationType || "airport",
+        radiusKm: radiusKm || 5,
+        zoneShape: zoneShape || null,
+        isActive: isActive !== false,
     });
 
     res.status(201).json({
@@ -128,6 +136,11 @@ export const deleteAirport = TryCatch(async (req, res, next) => {
             message: "Airport not found",
         });
     }
+
+    // Cascade-delete all pricing records linked to this location
+    // so they don't become orphaned and break future lookups
+    const deletedPricing = await AirportPricing.deleteMany({ airport: req.params.id });
+    console.log(`Cascade-deleted ${deletedPricing.deletedCount} pricing record(s) for ${airport.name}`);
 
     res.status(200).json({
         success: true,
