@@ -85,6 +85,16 @@ const airportSchema = new mongoose.Schema(
             // Examples: Heathrow=8km (all terminals), Wembley=1.5km
         },
 
+        // ----- Geographic Zone Shape -----
+        // Stores the drawn polygon or circle zone from the admin map tool.
+        // type: 'polygon' | 'circle'
+        // polygon: { type: 'polygon', coordinates: [{ lat, lng }, ...] }
+        // circle:  { type: 'circle', center: { lat, lng }, radius: <meters> }
+        zoneShape: {
+            type: mongoose.Schema.Types.Mixed,
+            default: null,
+        },
+
         // ----- Status -----
         isActive: {
             type: Boolean,
