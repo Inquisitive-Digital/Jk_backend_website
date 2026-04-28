@@ -30,6 +30,7 @@ import eventRoutes from "./src/routes/event.route.js";
 import blogRoutes from "./src/routes/blog.route.js";
 import contactRoutes from "./src/routes/contact.route.js";
 import faqRoutes from "./src/routes/faq.route.js";
+import calendarEventRoutes from "./src/routes/calendarEvent.route.js";
 import Blog from "./src/models/blog.model.js";
 import { Service } from "./src/models/service.model.js";
 import Event from "./src/models/event.model.js";
@@ -75,6 +76,7 @@ app.use("/api/events", eventRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/faqs", faqRoutes);
+app.use("/api/calendar-events", calendarEventRoutes);
 
 
 // ================================================================
