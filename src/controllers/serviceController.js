@@ -7,7 +7,7 @@ import { deleteFile } from "../middlewares/multer.js";
 // @access  Admin
 export const createService = async (req, res) => {
     try {
-        const { title, subtitle, category, slug, description, longDescription, features, sections, script, isActive, priority, meta_title, meta_description } = req.body;
+        const { title, subtitle, category, slug, description, longDescription, features, sections, faqs, script, isActive, priority, meta_title, meta_description } = req.body;
 
         // Build image object
         let image = {};
@@ -49,6 +49,16 @@ export const createService = async (req, res) => {
             }
         }
 
+        // Parse faqs if sent as JSON string
+        let parsedFaqs = faqs;
+        if (typeof faqs === "string") {
+            try {
+                parsedFaqs = JSON.parse(faqs);
+            } catch {
+                parsedFaqs = [];
+            }
+        }
+
         const service = await Service.create({
             title,
             subtitle,
@@ -59,6 +69,7 @@ export const createService = async (req, res) => {
             image,
             features: parsedFeatures || [],
             sections: parsedSections || [],
+            faqs: parsedFaqs || [],
             script: script || "",
             isActive: isActive !== undefined ? isActive : true,
             priority: priority || 0,
@@ -89,6 +100,70 @@ export const createService = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error creating service",
+            error: error.message,
+        });
+    }
+};
+
+// @desc    Get all services for admin panel (includes inactive)
+// @route   GET /api/services/admin/all?page=1&limit=20
+// @access  Admin
+export const getAllServicesAdmin = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        const [services, total] = await Promise.all([
+            Service.find({})
+                .sort({ priority: 1, createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            Service.countDocuments({}),
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        res.status(200).json({
+            success: true,
+            services,
+            totalPages,
+            total,
+            page,
+        });
+    } catch (error) {
+        console.error("Error fetching services (admin):", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching services",
+            error: error.message,
+        });
+    }
+};
+
+// @desc    Get single service by ID (admin edit form)
+// @route   GET /api/services/admin/:id
+// @access  Admin
+export const getServiceById = async (req, res) => {
+    try {
+        const service = await Service.findById(req.params.id);
+
+        if (!service) {
+            return res.status(404).json({
+                success: false,
+                message: "Service not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            service,
+        });
+    } catch (error) {
+        console.error("Error fetching service by ID:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching service",
             error: error.message,
         });
     }
@@ -181,7 +256,7 @@ export const updateService = async (req, res) => {
             });
         }
 
-        const { title, subtitle, category, slug, description, longDescription, features, sections, script, isActive, priority, meta_title, meta_description } = req.body;
+        const { title, subtitle, category, slug, description, longDescription, features, sections, faqs, script, isActive, priority, meta_title, meta_description } = req.body;
 
         // Update fields
         if (title) service.title = title;
@@ -220,6 +295,19 @@ export const updateService = async (req, res) => {
                 }
             }
             service.sections = parsedSections;
+        }
+
+        // Parse and update faqs
+        if (faqs !== undefined) {
+            let parsedFaqs = faqs;
+            if (typeof faqs === "string") {
+                try {
+                    parsedFaqs = JSON.parse(faqs);
+                } catch {
+                    parsedFaqs = [];
+                }
+            }
+            service.faqs = parsedFaqs;
         }
 
         // Update image if new one uploaded

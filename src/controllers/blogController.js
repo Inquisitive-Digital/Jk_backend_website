@@ -4,7 +4,7 @@ import Blog from "../models/blog.model.js";
 export const createBlog = async (req, res) => {
     try {
         const {
-            title, slug, intro, excerpt, sections,
+            title, slug, intro, excerpt, sections, faqs,
             heroImageUrl, heroImageAlt,
             author, category, tags,
             seoTitle, seoDescription,
@@ -37,6 +37,11 @@ export const createBlog = async (req, res) => {
         // Handle tags array
         if (tags) {
             blogData.tags = typeof tags === "string" ? JSON.parse(tags) : tags;
+        }
+
+        // Handle faqs array
+        if (faqs) {
+            blogData.faqs = typeof faqs === "string" ? JSON.parse(faqs) : faqs;
         }
 
         // Handle file upload for heroImage
@@ -208,6 +213,9 @@ export const updateBlog = async (req, res) => {
         }
         if (updateData.sections && typeof updateData.sections === "string") {
             updateData.sections = JSON.parse(updateData.sections);
+        }
+        if (updateData.faqs && typeof updateData.faqs === "string") {
+            updateData.faqs = JSON.parse(updateData.faqs);
         }
 
         if (req.files?.heroImage?.[0]) {
