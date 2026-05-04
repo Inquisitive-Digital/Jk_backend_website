@@ -7,7 +7,7 @@ export const createBlog = async (req, res) => {
             title, slug, intro, excerpt, sections, faqs,
             heroImageUrl, heroImageAlt,
             author, category, tags,
-            seoTitle, seoDescription,
+            seoTitle, seoDescription, script,
             isActive, priority, publishDate,
         } = req.body;
 
@@ -21,6 +21,7 @@ export const createBlog = async (req, res) => {
             category,
             seoTitle,
             seoDescription,
+            script,
             isActive: isActive !== undefined ? isActive : true,
             priority: priority || 0,
         };

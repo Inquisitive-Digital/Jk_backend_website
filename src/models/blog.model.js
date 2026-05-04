@@ -98,6 +98,12 @@ const blogSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        // JSON-LD structured data (script tag content for SEO)
+        script: {
+            type: String,
+            trim: true,
+            default: "",
+        },
         // Admin controls
         isActive: {
             type: Boolean,
