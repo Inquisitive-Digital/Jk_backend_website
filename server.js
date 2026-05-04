@@ -44,7 +44,7 @@ const __dirname = path.dirname(__filename);
 
 // Middleware setup
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:5005", "http://127.0.0.1:5173", "https://jkexecutivechauffeurs.com", "https://www.jkexecutivechauffeurs.com", "http://jkexecutivechauffeurs.com", "https:/dev.jkexecutivechauffeurs.com"],
+  origin: ["http://localhost:5173", "http://localhost:5005", "http://127.0.0.1:5173", "https://jk-frontend-nine.vercel.app", "https://jkexecutivechauffeurs.com", "https://www.jkexecutivechauffeurs.com", "http://jkexecutivechauffeurs.com/", "http://dev.jkexecutivechauffeurs.com/", "https://www.dev.jkexecutivechauffeurs.com"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -80,6 +80,51 @@ app.use("/api/calendar-events", calendarEventRoutes);
 
 
 // ================================================================
+// GEO: llms.txt — AI-readable business summary for LLMs
+// ================================================================
+app.get('/llms.txt', (req, res) => {
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400'); // cache 24h
+  res.send(`# JK Executive Chauffeurs
+
+> Premium chauffeur and executive car service based in London, UK. Specialists in airport transfers, corporate travel, and luxury event transportation.
+
+## Core Services
+- Airport Transfers (Heathrow, Gatwick, Stansted, Luton, London City)
+- Corporate Chauffeur Services
+- Wedding & Special Event Transportation
+- Executive Business Travel
+- Hourly Hire
+
+## Fleet
+- Mercedes E-Class (Executive Saloon)
+- Mercedes S-Class (First Class)
+- Mercedes V-Class (Group/MPV)
+- Range Rover (Premium SUV)
+
+## Key Facts
+- Available 24/7, 365 days a year
+- Real-time flight tracking at no extra cost
+- Fixed-price fares, no hidden charges
+- DBS-checked, fully licensed professional drivers
+- Meet and greet at airports (60-min free wait)
+
+## Contact
+- Website: https://www.jkexecutivechauffeurs.com
+- Book: https://www.jkexecutivechauffeurs.com/booking
+- Email: info@jkexecutivechauffeurs.com
+
+## Key Pages
+- [Home](https://www.jkexecutivechauffeurs.com/)
+- [Book Now](https://www.jkexecutivechauffeurs.com/booking)
+- [Services](https://www.jkexecutivechauffeurs.com/services)
+- [Fleet](https://www.jkexecutivechauffeurs.com/fleet)
+- [Blog](https://www.jkexecutivechauffeurs.com/blog)
+- [Contact](https://www.jkexecutivechauffeurs.com/contact)
+`);
+});
+
+// ================================================================
 // SSR ROUTES — Meta tag injection for SEO (Google indexing)
 // Must come BEFORE static file serving
 // ================================================================
@@ -108,12 +153,128 @@ app.get("/", async (req, res, next) => {
       <meta name="description" content="Premium chauffeur services in London and across the UK. Professional drivers for airport transfers, business travel, and special events. Book your luxury ride today." />
       <meta property="og:title" content="Chauffeur Service in London | JK Executive Chauffeurs" />
       <meta property="og:description" content="Luxury chauffeur services for airport transfers, corporate travel and events in London." />
-      <meta property="og:image" content="${SITE_URL}/logo.png" />
+      <meta property="og:image" content="${SITE_URL}/JkLogo.png" />
       <meta property="og:url" content="${SITE_URL}/" />
       <meta property="og:type" content="website" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content="Chauffeur Service in London | JK Executive Chauffeurs" />
+      <meta name="twitter:description" content="Luxury chauffeur services for airport transfers, corporate travel and events in London." />
       <link rel="canonical" href="${SITE_URL}/" />`;
 
-    const finalHtml = injectMeta(template, metaTags);
+    // ── GEO: JSON-LD Structured Data ─────────────────────────────────────
+    // LocalBusiness schema — AI models extract business facts from this
+    const localBusinessJsonLd = `<script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "JK Executive Chauffeurs",
+      "url": "${SITE_URL}",
+      "logo": "${SITE_URL}/JkLogo.png",
+      "image": "${SITE_URL}/JkLogo.png",
+      "description": "Premium chauffeur services in London for airport transfers, corporate travel, and special events. Professional, DBS-checked drivers available 24/7.",
+      "telephone": "+44-XXXX-XXXXXX",
+      "email": "info@jkexecutivechauffeurs.com",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "London",
+        "addressRegion": "England",
+        "addressCountry": "GB"
+      },
+      "areaServed": [
+        {"@type": "City", "name": "London"},
+        {"@type": "Airport", "name": "Heathrow Airport"},
+        {"@type": "Airport", "name": "Gatwick Airport"},
+        {"@type": "Airport", "name": "Stansted Airport"},
+        {"@type": "Airport", "name": "Luton Airport"},
+        {"@type": "Airport", "name": "London City Airport"}
+      ],
+      "priceRange": "££",
+      "currenciesAccepted": "GBP",
+      "paymentAccepted": "Credit Card, Debit Card, Cash, Bank Transfer",
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+        "opens": "00:00",
+        "closes": "23:59"
+      },
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Chauffeur Services",
+        "itemListElement": [
+          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Airport Transfer"}},
+          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Corporate Chauffeur Service"}},
+          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Wedding Transportation"}},
+          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Event Transportation"}},
+          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Hourly Hire"}}
+        ]
+      },
+      "sameAs": [
+        "https://www.trustpilot.com/review/jkexecutivechauffeurs.com"
+      ]
+    }
+    </script>`;
+
+    // FAQPage schema — AI uses this to answer user questions about your business
+    const faqJsonLd = `<script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How much does a chauffeur service from Heathrow Airport to London cost?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "JK Executive Chauffeurs offers fixed-price airport transfers from Heathrow with no hidden charges. Prices vary by vehicle class and destination in London. Get an instant quote at jkexecutivechauffeurs.com/booking."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do you offer 24/7 chauffeur service in London?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. JK Executive Chauffeurs operates 24 hours a day, 7 days a week, 365 days a year across London and all major UK airports."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What luxury vehicles are available for hire?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Our fleet includes Mercedes E-Class (executive saloon), Mercedes S-Class (first class), Mercedes V-Class (group travel up to 7 passengers), and Range Rover (premium SUV)."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do you track flights for airport pickups?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. We monitor all flights in real-time and automatically adjust the pickup time if your flight is delayed or lands early, at no extra cost."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Are JK Executive Chauffeur drivers licensed and DBS checked?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. All our drivers hold a valid Private Hire Vehicle (PHV) licence, are fully DBS (Disclosure and Barring Service) checked, and all vehicles carry full commercial insurance."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Which airports do you cover?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We cover all major London airports: Heathrow (LHR), Gatwick (LGW), Stansted (STN), Luton (LTN), and London City Airport (LCY), as well as Southend Airport."
+          }
+        }
+      ]
+    }
+    </script>`;
+    // ─────────────────────────────────────────────────────────────────────
+
+    const structuredData = localBusinessJsonLd + faqJsonLd;
+    const finalHtml = injectMeta(template, metaTags, structuredData);
     return res.status(200).set({ "Content-Type": "text/html" }).end(finalHtml);
   } catch (err) {
     return next();
