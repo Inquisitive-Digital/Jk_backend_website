@@ -54,6 +54,17 @@ const serviceSchema = new mongoose.Schema(
                     url: { type: String },
                     alt: { type: String },
                 },
+                subsections: [                                // NEW: Multiple subheadings
+                    {
+                        subheading: { type: String, trim: true },
+                        text: { type: String },
+                        listItems: [{ type: String }],
+                        image: {
+                            url: { type: String },
+                            alt: { type: String },
+                        },
+                    }
+                ]
             },
         ],
 
@@ -90,6 +101,15 @@ const serviceSchema = new mongoose.Schema(
             trim: true,
             default: "",
         },
+
+        // FAQs — per-service FAQ items (optional)
+        faqs: [
+            {
+                question: { type: String, trim: true },
+                answer:   { type: String, trim: true },
+                tag:      { type: String, trim: true, default: "FAQ" },
+            },
+        ],
 
         // Admin control
         isActive: {
