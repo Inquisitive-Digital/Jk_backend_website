@@ -106,7 +106,7 @@ export const createService = async (req, res) => {
 };
 
 // @desc    Get all services for admin panel (includes inactive)
-// @route   GET /api/services/admin/all?page=1&limit=20
+// @route   GET /api/services/admin/all?page=1&limit=20&search=
 // @access  Admin
 export const getAllServicesAdmin = async (req, res) => {
     try {
@@ -114,12 +114,25 @@ export const getAllServicesAdmin = async (req, res) => {
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
 
+        // Build search filter — if ?search= is provided, apply regex across key fields
+        const searchTerm = req.query.search?.trim();
+        const filter = searchTerm
+            ? {
+                  $or: [
+                      { title: { $regex: searchTerm, $options: "i" } },
+                      { slug: { $regex: searchTerm, $options: "i" } },
+                      { category: { $regex: searchTerm, $options: "i" } },
+                      { subtitle: { $regex: searchTerm, $options: "i" } },
+                  ],
+              }
+            : {};
+
         const [services, total] = await Promise.all([
-            Service.find({})
+            Service.find(filter)
                 .sort({ priority: 1, createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
-            Service.countDocuments({}),
+            Service.countDocuments(filter),
         ]);
 
         const totalPages = Math.ceil(total / limit);

@@ -126,13 +126,26 @@ export const getAllBlogsAdmin = async (req, res) => {
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
 
+        // Build search filter — if ?search= is provided, apply regex across key fields
+        const searchTerm = req.query.search?.trim();
+        const filter = searchTerm
+            ? {
+                  $or: [
+                      { title: { $regex: searchTerm, $options: "i" } },
+                      { slug: { $regex: searchTerm, $options: "i" } },
+                      { category: { $regex: searchTerm, $options: "i" } },
+                      { author: { $regex: searchTerm, $options: "i" } },
+                  ],
+              }
+            : {};
+
         const [blogs, total] = await Promise.all([
-            Blog.find({})
+            Blog.find(filter)
                 .sort({ priority: 1, publishDate: -1, createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
                 .select("-sections -__v"),
-            Blog.countDocuments({}),
+            Blog.countDocuments(filter),
         ]);
 
         res.status(200).json({
