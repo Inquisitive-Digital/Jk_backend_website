@@ -98,6 +98,16 @@ const airportPricingSchema = new mongoose.Schema(
             },
         },
 
+        // ----- Hourly Pricing (optional, for special locations that also offer hourly hire) -----
+        hourly: {
+            hourlyRate: { type: Number, default: 0 },
+            minimumHours: { type: Number, default: 4 },
+            additionalHourCharge: { type: Number, default: 0 },
+            milesIncluded: { type: Number, default: 40 },
+            excessMileageCharge: { type: Number, default: 0 },
+            isActive: { type: Boolean, default: false }, // false = not configured
+        },
+
         // ----- Display Settings -----
         displayParkingInclusive: {
             type: Boolean,

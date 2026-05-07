@@ -9,6 +9,7 @@ import {
   calculateP2PPrice,
   calculateHourlyPrice,
   calculateAirportPrice,
+  calculateAirportHourlyPrice,
   roundPrice,
   kmToMiles,
 } from "../utils/pricingCalculator.js";
@@ -704,34 +705,66 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
             status: "active",
           });
 
-          if (airportPricing) {
-            const priceResult = calculateAirportPrice(airportPricing, distanceMiles, {
-              isPickup: isActuallyPickup,
-              isDropoff: isActuallyDropoff,
-            });
+          if (!airportPricing) return null;
 
-            return {
-              bookingType: "airport", // Mark as airport pricing
-              isAirportPricing: true,
-              airportName: evalLocation.name,
-              basePrice: priceResult.baseCharge + priceResult.distanceCharge,
-              airportCharges: priceResult.airportCharges,
-              congestionCharge: priceResult.congestionCharge,
-              tax: priceResult.vatAmount,
-              totalPrice: priceResult.totalPrice,
-              breakdown: priceResult.breakdown,
-              vatInclusive: priceResult.vatInclusive,
-              vatRate: priceResult.vatRate,
-              additionalCharges: {
-                extraStopPrice: airportPricing.extras?.extraStopPrice || 0,
-                childSeatPrice: airportPricing.extras?.childSeatPrice || 0,
-                congestionCharge: priceResult.congestionCharge,
-                airportPickupCharge: airportPricing.extras?.airportPickupCharge || 0,
-                airportDropoffCharge: airportPricing.extras?.airportDropoffCharge || 0,
-              },
-            };
+          // --- HOURLY booking: prefer special-location hourly config ---
+          if (bookingType === "hourly") {
+            const hourlyResult = calculateAirportHourlyPrice(airportPricing, parseInt(hours), distanceMiles);
+            if (hourlyResult) {
+              // Special location has hourly pricing configured — use it
+              return {
+                bookingType: "hourly",
+                isAirportPricing: true,
+                isHourlyPricing: true,
+                airportName: evalLocation.name,
+                basePrice: roundPrice(hourlyResult.baseCharge + hourlyResult.extraHourCharge),
+                congestionCharge: hourlyResult.congestionCharge,
+                tax: hourlyResult.vatAmount,
+                totalPrice: hourlyResult.totalPrice,
+                breakdown: hourlyResult.breakdown,
+                vatInclusive: hourlyResult.vatInclusive,
+                vatRate: hourlyResult.vatRate,
+                minimumHours: hourlyResult.minimumHours,
+                hourlyRate: hourlyResult.hourlyRate,
+                milesIncluded: hourlyResult.milesIncluded,
+                additionalCharges: {
+                  extraStopPrice: airportPricing.extras?.extraStopPrice || 0,
+                  childSeatPrice: airportPricing.extras?.childSeatPrice || 0,
+                  congestionCharge: hourlyResult.congestionCharge,
+                },
+              };
+            }
+            // Hourly not configured for this special location — return null so
+            // caller falls back to standard hourly pricing
+            return null;
           }
-          return null;
+
+          // --- P2P / airport booking ---
+          const priceResult = calculateAirportPrice(airportPricing, distanceMiles, {
+            isPickup: isActuallyPickup,
+            isDropoff: isActuallyDropoff,
+          });
+
+          return {
+            bookingType: "airport", // Mark as airport pricing
+            isAirportPricing: true,
+            airportName: evalLocation.name,
+            basePrice: priceResult.baseCharge + priceResult.distanceCharge,
+            airportCharges: priceResult.airportCharges,
+            congestionCharge: priceResult.congestionCharge,
+            tax: priceResult.vatAmount,
+            totalPrice: priceResult.totalPrice,
+            breakdown: priceResult.breakdown,
+            vatInclusive: priceResult.vatInclusive,
+            vatRate: priceResult.vatRate,
+            additionalCharges: {
+              extraStopPrice: airportPricing.extras?.extraStopPrice || 0,
+              childSeatPrice: airportPricing.extras?.childSeatPrice || 0,
+              congestionCharge: priceResult.congestionCharge,
+              airportPickupCharge: airportPricing.extras?.airportPickupCharge || 0,
+              airportDropoffCharge: airportPricing.extras?.airportDropoffCharge || 0,
+            },
+          };
         };
 
         const isSameLocation = pickupAirport && dropoffAirport && pickupAirport._id.toString() === dropoffAirport._id.toString();
