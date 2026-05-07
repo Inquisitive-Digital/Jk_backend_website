@@ -539,7 +539,8 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
 
   const distanceKm = distanceData.distance;
   const durationMins = distanceData.duration;
-  const distanceMiles = kmToMiles(distanceKm);
+  const exactMiles = kmToMiles(distanceKm);
+  const distanceMiles = Math.round(exactMiles * 10) / 10;
 
   // Step 3: Check if pickup or dropoff is a special location (airport, stadium, etc.)
   // Each location has its own radiusKm configured by admin
@@ -558,14 +559,17 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
   };
 
   // Helper: Ray-casting point-in-polygon test
+  // Coordinates: polygonCoords[i].lat = Y axis, polygonCoords[i].lng = X axis
   const isPointInPolygon = (lat, lng, polygonCoords) => {
     let inside = false;
     const n = polygonCoords.length;
     for (let i = 0, j = n - 1; i < n; j = i++) {
-      const xi = polygonCoords[i].lat, yi = polygonCoords[i].lng;
-      const xj = polygonCoords[j].lat, yj = polygonCoords[j].lng;
-      const intersect = ((yi > lng) !== (yj > lng)) &&
-        (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi);
+      const xi = polygonCoords[i].lng, yi = polygonCoords[i].lat;
+      const xj = polygonCoords[j].lng, yj = polygonCoords[j].lat;
+      // Ray casts horizontally: check if the point's lat is between yi and yj,
+      // and if the intersection point's lng is to the right of the point's lng
+      const intersect = ((yi > lat) !== (yj > lat)) &&
+        (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
       if (intersect) inside = !inside;
     }
     return inside;
@@ -580,29 +584,42 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
   // Check each location to see if pickup/dropoff falls within its zone
   for (const location of allLocations) {
     const zone = location.zoneShape;
+    const locationRadius = location.radiusKm || 5;
+
+    console.log(`  Checking location: "${location.name}" | zoneType: ${zone?.type || 'radius'} | radius: ${locationRadius}km`);
 
     // --- Polygon zone detection ---
     if (zone?.type === "polygon" && zone.coordinates?.length >= 3) {
-      let polygonMatched = false;
+      let pickupInPolygon = false;
+      let dropoffInPolygon = false;
+
       if (!pickupLocation_special) {
-        if (isPointInPolygon(pickupLocation.coordinates.lat, pickupLocation.coordinates.lng, zone.coordinates)) {
+        pickupInPolygon = isPointInPolygon(pickupLocation.coordinates.lat, pickupLocation.coordinates.lng, zone.coordinates);
+        if (pickupInPolygon) {
           pickupLocation_special = location;
-          polygonMatched = true;
+          console.log(`    ✅ PICKUP matched polygon zone for "${location.name}"`);
         }
       }
       if (!dropoffLocation_special) {
-        if (isPointInPolygon(dropoffLocation.coordinates.lat, dropoffLocation.coordinates.lng, zone.coordinates)) {
+        dropoffInPolygon = isPointInPolygon(dropoffLocation.coordinates.lat, dropoffLocation.coordinates.lng, zone.coordinates);
+        if (dropoffInPolygon) {
           dropoffLocation_special = location;
-          polygonMatched = true;
+          console.log(`    ✅ DROPOFF matched polygon zone for "${location.name}"`);
         }
       }
-      // Only skip radius check if polygon matched — otherwise fall through
-      // so points slightly outside the polygon can still match via radiusKm
-      if (polygonMatched) continue;
+
+      // If BOTH matched the polygon, skip to next location (no need for radius check)
+      if (pickupInPolygon && dropoffInPolygon) continue;
+
+      // If at least one matched via polygon, skip radius for the matched one only
+      // (the other was already unmatched by polygon, fall through to radius check)
+      if (!pickupInPolygon && !dropoffInPolygon) {
+        // Neither matched the polygon; still try radius check below
+        console.log(`    ❌ Neither pickup nor dropoff matched polygon zone for "${location.name}" — trying radius`);
+      }
     }
 
     // --- Circle / radius fallback ---
-    const locationRadius = location.radiusKm || 5;
     if (!pickupLocation_special && location.coordinates?.lat && location.coordinates?.lng) {
       const pickupDistance = getDistanceKm(
         pickupLocation.coordinates.lat,
@@ -610,8 +627,10 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
         location.coordinates.lat,
         location.coordinates.lng
       );
+      console.log(`    Pickup distance to "${location.name}": ${pickupDistance.toFixed(2)}km (radius: ${locationRadius}km)`);
       if (pickupDistance <= locationRadius) {
         pickupLocation_special = location;
+        console.log(`    ✅ PICKUP matched radius zone for "${location.name}"`);
       }
     }
     if (!dropoffLocation_special && location.coordinates?.lat && location.coordinates?.lng) {
@@ -621,8 +640,10 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
         location.coordinates.lat,
         location.coordinates.lng
       );
+      console.log(`    Dropoff distance to "${location.name}": ${dropoffDistance.toFixed(2)}km (radius: ${locationRadius}km)`);
       if (dropoffDistance <= locationRadius) {
         dropoffLocation_special = location;
+        console.log(`    ✅ DROPOFF matched radius zone for "${location.name}"`);
       }
     }
   }
@@ -635,14 +656,11 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
   const isAirportJourney = !!(pickupAirport || dropoffAirport);
   const pricingAirport = pickupAirport || dropoffAirport;
 
-  console.log("Special Location detection:", {
+  console.log("=== Special Location detection RESULT ===", {
     isAirportJourney,
-    pickupCoords: pickupLocation.coordinates,
-    dropoffCoords: dropoffLocation.coordinates,
-    pickupLocation: pickupAirport ? `${pickupAirport.name} (${pickupAirport.locationType}, zone: ${pickupAirport.zoneShape?.type || 'radius'})` : null,
-    dropoffLocation: dropoffAirport ? `${dropoffAirport.name} (${dropoffAirport.locationType}, zone: ${dropoffAirport.zoneShape?.type || 'radius'})` : null,
-    usingLocation: pricingAirport?.name || null,
-    usingLocationId: pricingAirport?._id?.toString() || null,
+    pickupLocation: pickupAirport ? `${pickupAirport.name} (zone: ${pickupAirport.zoneShape?.type || 'radius'})` : "none",
+    dropoffLocation: dropoffAirport ? `${dropoffAirport.name} (zone: ${dropoffAirport.zoneShape?.type || 'radius'})` : "none",
+    usingLocation: pricingAirport?.name || "none — will use standard pricing",
   });
 
 
