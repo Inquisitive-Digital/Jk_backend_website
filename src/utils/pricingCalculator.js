@@ -584,7 +584,7 @@ export const calculateAirportHourlyPrice = (airportPricing, hours, distanceMiles
   }
 
   const hourlyRate = hourlyConfig.hourlyRate || 0;
-  const minimumHours = hourlyConfig.minimumHours || 4;
+  const minimumHours = hourlyConfig.minimumHours || 3;
   const additionalHourCharge = hourlyConfig.additionalHourCharge || hourlyRate;
   const milesIncluded = hourlyConfig.milesIncluded || 0;
   const excessMileageCharge = hourlyConfig.excessMileageCharge || 0;
