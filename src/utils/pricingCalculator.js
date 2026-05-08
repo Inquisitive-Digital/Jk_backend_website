@@ -603,7 +603,16 @@ export const calculateAirportHourlyPrice = (airportPricing, hours, distanceMiles
     breakdownParts.push(`Extra: ${extraHours} hrs × £${additionalHourCharge}/hr = £${extraHourChargeTotal.toFixed(2)}`);
   }
 
-  // Excess mileage charge
+  // Car park charge — added into base fare if present
+  const carParkCharge = extras?.carParkCharge || 0;
+  if (carParkCharge > 0) {
+    breakdownParts.push(`Car park charge: £${carParkCharge.toFixed(2)}`);
+  }
+
+  // Combined base (hours + parking) — this is what the frontend shows as "BASE FARE"
+  const combinedBaseCharge = baseCharge + extraHourChargeTotal + carParkCharge;
+
+  // Excess mileage charge (separate, added after base)
   let excessMileageChargeTotal = 0;
   if (distanceMiles > milesIncluded && excessMileageCharge > 0) {
     const excessMiles = distanceMiles - milesIncluded;
@@ -611,21 +620,16 @@ export const calculateAirportHourlyPrice = (airportPricing, hours, distanceMiles
     breakdownParts.push(`Excess miles: ${excessMiles.toFixed(1)} × £${excessMileageCharge}/mile = £${excessMileageChargeTotal.toFixed(2)}`);
   }
 
-  // Congestion charge
+  // Congestion charge (separate, added after base)
   const congestionCharge = extras.congestionCharge || 0;
   if (congestionCharge > 0) {
     breakdownParts.push(`Congestion charge: £${congestionCharge.toFixed(2)}`);
   }
 
-  // Car park charge
-  const carParkCharge = extras.carParkCharge || 0;
-  if (carParkCharge > 0) {
-    breakdownParts.push(`Car park charge: £${carParkCharge.toFixed(2)}`);
-  }
+  // Journey subtotal = combinedBase + excess mileage + congestion
+  const journeyTotal = combinedBaseCharge + excessMileageChargeTotal + congestionCharge;
 
-  const journeyTotal = baseCharge + extraHourChargeTotal + excessMileageChargeTotal + congestionCharge + carParkCharge;
-
-  // VAT
+  // VAT applied on the full journey total (normal flow)
   const vatRate = 0.20;
   const vatAmount = airportPricing.displayVATInclusive ? journeyTotal * vatRate : 0;
 
@@ -635,7 +639,7 @@ export const calculateAirportHourlyPrice = (airportPricing, hours, distanceMiles
   }
 
   return {
-    baseCharge: roundPrice(baseCharge),
+    baseCharge: roundPrice(combinedBaseCharge),   // BASE FARE = hours + extra hours + car park
     extraHourCharge: roundPrice(extraHourChargeTotal),
     excessMileageCharge: roundPrice(excessMileageChargeTotal),
     congestionCharge: roundPrice(congestionCharge),
