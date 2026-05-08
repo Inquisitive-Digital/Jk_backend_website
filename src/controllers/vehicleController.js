@@ -709,7 +709,7 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
 
           // --- HOURLY booking: prefer special-location hourly config ---
           if (bookingType === "hourly") {
-            const hourlyResult = calculateAirportHourlyPrice(airportPricing, parseInt(hours), distanceMiles);
+            const hourlyResult = calculateAirportHourlyPrice(airportPricing, parseFloat(hours), distanceMiles);
             if (hourlyResult) {
               // Special location has hourly pricing configured — use it
               return {
@@ -807,7 +807,7 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
         if (pricing) {
           // Get base journey price first (without extras and VAT)
           const journeyPrice = bookingType === "hourly"
-            ? calculateHourlyPrice(pricing, parseInt(hours), distanceMiles)
+            ? calculateHourlyPrice(pricing, parseFloat(hours), distanceMiles)
             : calculateP2PPrice(pricing, distanceMiles);
 
           // Get congestion charge from pricing config
@@ -903,7 +903,7 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
       pickupTime,
       bookingType: isAirportJourney ? "airport" : bookingType,
       isAirportJourney,
-      hours: bookingType === "hourly" ? parseInt(hours) : null,
+      hours: bookingType === "hourly" ? parseFloat(hours) : null,
       coverageZone,
     },
 

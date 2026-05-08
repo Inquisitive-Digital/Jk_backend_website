@@ -617,7 +617,13 @@ export const calculateAirportHourlyPrice = (airportPricing, hours, distanceMiles
     breakdownParts.push(`Congestion charge: £${congestionCharge.toFixed(2)}`);
   }
 
-  const journeyTotal = baseCharge + extraHourChargeTotal + excessMileageChargeTotal + congestionCharge;
+  // Car park charge
+  const carParkCharge = extras.carParkCharge || 0;
+  if (carParkCharge > 0) {
+    breakdownParts.push(`Car park charge: £${carParkCharge.toFixed(2)}`);
+  }
+
+  const journeyTotal = baseCharge + extraHourChargeTotal + excessMileageChargeTotal + congestionCharge + carParkCharge;
 
   // VAT
   const vatRate = 0.20;
@@ -633,6 +639,7 @@ export const calculateAirportHourlyPrice = (airportPricing, hours, distanceMiles
     extraHourCharge: roundPrice(extraHourChargeTotal),
     excessMileageCharge: roundPrice(excessMileageChargeTotal),
     congestionCharge: roundPrice(congestionCharge),
+    carParkCharge: roundPrice(carParkCharge),
     subtotal: roundPrice(journeyTotal),
     vatRate: vatRate * 100,
     vatAmount: roundPrice(vatAmount),
