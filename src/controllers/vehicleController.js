@@ -717,8 +717,10 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
                 isAirportPricing: true,
                 isHourlyPricing: true,
                 airportName: evalLocation.name,
-                basePrice: roundPrice(hourlyResult.baseCharge + hourlyResult.extraHourCharge),
+                basePrice: hourlyResult.baseCharge, // already includes extra hours + car park
                 congestionCharge: hourlyResult.congestionCharge,
+                carParkCharge: hourlyResult.carParkCharge,
+                excessMileageCharge: hourlyResult.excessMileageCharge,
                 tax: hourlyResult.vatAmount,
                 totalPrice: hourlyResult.totalPrice,
                 breakdown: hourlyResult.breakdown,
@@ -731,6 +733,7 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
                   extraStopPrice: airportPricing.extras?.extraStopPrice || 0,
                   childSeatPrice: airportPricing.extras?.childSeatPrice || 0,
                   congestionCharge: hourlyResult.congestionCharge,
+                  carParkCharge: hourlyResult.carParkCharge,
                 },
               };
             }
