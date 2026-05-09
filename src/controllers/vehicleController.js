@@ -9,6 +9,7 @@ import {
   calculateP2PPrice,
   calculateHourlyPrice,
   calculateAirportPrice,
+  calculateAirportHourlyPrice,
   roundPrice,
   kmToMiles,
 } from "../utils/pricingCalculator.js";
@@ -539,14 +540,15 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
 
   const distanceKm = distanceData.distance;
   const durationMins = distanceData.duration;
-  const distanceMiles = kmToMiles(distanceKm);
+  const exactMiles = kmToMiles(distanceKm);
+  const distanceMiles = Math.round(exactMiles * 10) / 10;
 
   // Step 3: Check if pickup or dropoff is a special location (airport, stadium, etc.)
   // Each location has its own radiusKm configured by admin
 
-  // Helper function to calculate distance between two coordinates (Haversine formula)
+  // Helper: Haversine distance between two lat/lng points (returns km)
   const getDistanceKm = (lat1, lng1, lat2, lng2) => {
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
     const a =
@@ -554,7 +556,24 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
       Math.sin(dLng / 2) * Math.sin(dLng / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in km
+    return R * c;
+  };
+
+  // Helper: Ray-casting point-in-polygon test
+  // Coordinates: polygonCoords[i].lat = Y axis, polygonCoords[i].lng = X axis
+  const isPointInPolygon = (lat, lng, polygonCoords) => {
+    let inside = false;
+    const n = polygonCoords.length;
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+      const xi = polygonCoords[i].lng, yi = polygonCoords[i].lat;
+      const xj = polygonCoords[j].lng, yj = polygonCoords[j].lat;
+      // Ray casts horizontally: check if the point's lat is between yi and yj,
+      // and if the intersection point's lng is to the right of the point's lng
+      const intersect = ((yi > lat) !== (yj > lat)) &&
+        (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
   };
 
   // Get all active special locations
@@ -563,11 +582,45 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
   let pickupLocation_special = null;
   let dropoffLocation_special = null;
 
-  // Check each location to see if pickup/dropoff falls within its radius
+  // Check each location to see if pickup/dropoff falls within its zone
   for (const location of allLocations) {
-    const locationRadius = location.radiusKm || 5; // Default 5km if not set
+    const zone = location.zoneShape;
+    const locationRadius = location.radiusKm || 5;
 
-    // Check pickup
+    console.log(`  Checking location: "${location.name}" | zoneType: ${zone?.type || 'radius'} | radius: ${locationRadius}km`);
+
+    // --- Polygon zone detection ---
+    if (zone?.type === "polygon" && zone.coordinates?.length >= 3) {
+      let pickupInPolygon = false;
+      let dropoffInPolygon = false;
+
+      if (!pickupLocation_special) {
+        pickupInPolygon = isPointInPolygon(pickupLocation.coordinates.lat, pickupLocation.coordinates.lng, zone.coordinates);
+        if (pickupInPolygon) {
+          pickupLocation_special = location;
+          console.log(`    ✅ PICKUP matched polygon zone for "${location.name}"`);
+        }
+      }
+      if (!dropoffLocation_special) {
+        dropoffInPolygon = isPointInPolygon(dropoffLocation.coordinates.lat, dropoffLocation.coordinates.lng, zone.coordinates);
+        if (dropoffInPolygon) {
+          dropoffLocation_special = location;
+          console.log(`    ✅ DROPOFF matched polygon zone for "${location.name}"`);
+        }
+      }
+
+      // If BOTH matched the polygon, skip to next location (no need for radius check)
+      if (pickupInPolygon && dropoffInPolygon) continue;
+
+      // If at least one matched via polygon, skip radius for the matched one only
+      // (the other was already unmatched by polygon, fall through to radius check)
+      if (!pickupInPolygon && !dropoffInPolygon) {
+        // Neither matched the polygon; still try radius check below
+        console.log(`    ❌ Neither pickup nor dropoff matched polygon zone for "${location.name}" — trying radius`);
+      }
+    }
+
+    // --- Circle / radius fallback ---
     if (!pickupLocation_special && location.coordinates?.lat && location.coordinates?.lng) {
       const pickupDistance = getDistanceKm(
         pickupLocation.coordinates.lat,
@@ -575,12 +628,12 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
         location.coordinates.lat,
         location.coordinates.lng
       );
+      console.log(`    Pickup distance to "${location.name}": ${pickupDistance.toFixed(2)}km (radius: ${locationRadius}km)`);
       if (pickupDistance <= locationRadius) {
         pickupLocation_special = location;
+        console.log(`    ✅ PICKUP matched radius zone for "${location.name}"`);
       }
     }
-
-    // Check dropoff
     if (!dropoffLocation_special && location.coordinates?.lat && location.coordinates?.lng) {
       const dropoffDistance = getDistanceKm(
         dropoffLocation.coordinates.lat,
@@ -588,8 +641,10 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
         location.coordinates.lat,
         location.coordinates.lng
       );
+      console.log(`    Dropoff distance to "${location.name}": ${dropoffDistance.toFixed(2)}km (radius: ${locationRadius}km)`);
       if (dropoffDistance <= locationRadius) {
         dropoffLocation_special = location;
+        console.log(`    ✅ DROPOFF matched radius zone for "${location.name}"`);
       }
     }
   }
@@ -602,13 +657,11 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
   const isAirportJourney = !!(pickupAirport || dropoffAirport);
   const pricingAirport = pickupAirport || dropoffAirport;
 
-  console.log("Special Location detection:", {
+  console.log("=== Special Location detection RESULT ===", {
     isAirportJourney,
-    pickupCoords: pickupLocation.coordinates,
-    dropoffCoords: dropoffLocation.coordinates,
-    pickupLocation: pickupAirport ? `${pickupAirport.name} (${pickupAirport.locationType}, ${pickupAirport.radiusKm}km)` : null,
-    dropoffLocation: dropoffAirport ? `${dropoffAirport.name} (${dropoffAirport.locationType}, ${dropoffAirport.radiusKm}km)` : null,
-    usingLocation: pricingAirport?.name || null,
+    pickupLocation: pickupAirport ? `${pickupAirport.name} (zone: ${pickupAirport.zoneShape?.type || 'radius'})` : "none",
+    dropoffLocation: dropoffAirport ? `${dropoffAirport.name} (zone: ${dropoffAirport.zoneShape?.type || 'radius'})` : "none",
+    usingLocation: pricingAirport?.name || "none — will use standard pricing",
   });
 
 
@@ -639,39 +692,74 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
       let priceData = null;
 
       // ----- CHECK FOR AIRPORT PRICING FIRST -----
-      if (isAirportJourney && pricingAirport) {
-        // Try to get airport-specific pricing for this vehicle
-        const airportPricing = await AirportPricing.findOne({
-          airport: pricingAirport._id,
-          vehicle: vehicle._id,
-          status: "active",
-        });
+      if (isAirportJourney) {
+        let maxPriceData = null;
 
-        if (airportPricing) {
-          // Use airport pricing calculation
-          const priceResult = calculateAirportPrice(airportPricing, distanceMiles, {
-            isPickup: !!pickupAirport,
-            isDropoff: !!dropoffAirport,
+        // Helper to evaluate pricing for a specific location
+        const evaluateLocationPricing = async (evalLocation, isActuallyPickup, isActuallyDropoff) => {
+          if (!evalLocation) return null;
+          
+          const airportPricing = await AirportPricing.findOne({
+            airport: evalLocation._id,
+            vehicle: vehicle._id,
+            status: "active",
           });
 
-          priceData = {
+          if (!airportPricing) return null;
+
+          // --- HOURLY booking: prefer special-location hourly config ---
+          if (bookingType === "hourly") {
+            const hourlyResult = calculateAirportHourlyPrice(airportPricing, parseFloat(hours), distanceMiles);
+            if (hourlyResult) {
+              // Special location has hourly pricing configured — use it
+              return {
+                bookingType: "hourly",
+                isAirportPricing: true,
+                isHourlyPricing: true,
+                airportName: evalLocation.name,
+                basePrice: hourlyResult.baseCharge, // already includes extra hours + car park
+                congestionCharge: hourlyResult.congestionCharge,
+                carParkCharge: hourlyResult.carParkCharge,
+                excessMileageCharge: hourlyResult.excessMileageCharge,
+                tax: hourlyResult.vatAmount,
+                totalPrice: hourlyResult.totalPrice,
+                breakdown: hourlyResult.breakdown,
+                vatInclusive: hourlyResult.vatInclusive,
+                vatRate: hourlyResult.vatRate,
+                minimumHours: hourlyResult.minimumHours,
+                hourlyRate: hourlyResult.hourlyRate,
+                milesIncluded: hourlyResult.milesIncluded,
+                additionalCharges: {
+                  extraStopPrice: airportPricing.extras?.extraStopPrice || 0,
+                  childSeatPrice: airportPricing.extras?.childSeatPrice || 0,
+                  congestionCharge: hourlyResult.congestionCharge,
+                  carParkCharge: hourlyResult.carParkCharge,
+                },
+              };
+            }
+            // Hourly not configured for this special location — return null so
+            // caller falls back to standard hourly pricing
+            return null;
+          }
+
+          // --- P2P / airport booking ---
+          const priceResult = calculateAirportPrice(airportPricing, distanceMiles, {
+            isPickup: isActuallyPickup,
+            isDropoff: isActuallyDropoff,
+          });
+
+          return {
             bookingType: "airport", // Mark as airport pricing
             isAirportPricing: true,
-            airportName: pricingAirport.name,
-
-            // Price breakdown
+            airportName: evalLocation.name,
             basePrice: priceResult.baseCharge + priceResult.distanceCharge,
             airportCharges: priceResult.airportCharges,
             congestionCharge: priceResult.congestionCharge,
             tax: priceResult.vatAmount,
             totalPrice: priceResult.totalPrice,
-
-            // Breakdown
             breakdown: priceResult.breakdown,
             vatInclusive: priceResult.vatInclusive,
             vatRate: priceResult.vatRate,
-
-            // Extra charges available
             additionalCharges: {
               extraStopPrice: airportPricing.extras?.extraStopPrice || 0,
               childSeatPrice: airportPricing.extras?.childSeatPrice || 0,
@@ -680,8 +768,32 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
               airportDropoffCharge: airportPricing.extras?.airportDropoffCharge || 0,
             },
           };
+        };
 
-          console.log(`Using AIRPORT pricing for ${vehicle.categoryName} at ${pricingAirport.name}`);
+        const isSameLocation = pickupAirport && dropoffAirport && pickupAirport._id.toString() === dropoffAirport._id.toString();
+
+        if (isSameLocation) {
+           // Both pickup and dropoff are the exact same special location
+           const singlePriceData = await evaluateLocationPricing(pickupAirport, true, true);
+           if (singlePriceData) maxPriceData = singlePriceData;
+        } else {
+           // Evaluate separately
+           const pickupPriceData = await evaluateLocationPricing(pickupAirport, true, false);
+           const dropoffPriceData = await evaluateLocationPricing(dropoffAirport, false, true);
+           
+           if (pickupPriceData && dropoffPriceData) {
+             // Choose the higher price
+             maxPriceData = pickupPriceData.totalPrice > dropoffPriceData.totalPrice ? pickupPriceData : dropoffPriceData;
+           } else if (pickupPriceData) {
+             maxPriceData = pickupPriceData;
+           } else if (dropoffPriceData) {
+             maxPriceData = dropoffPriceData;
+           }
+        }
+
+        if (maxPriceData) {
+          priceData = maxPriceData;
+          console.log(`Using AIRPORT pricing for ${vehicle.categoryName} at ${priceData.airportName} (Total: £${priceData.totalPrice})`);
         }
       }
 
@@ -698,7 +810,7 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
         if (pricing) {
           // Get base journey price first (without extras and VAT)
           const journeyPrice = bookingType === "hourly"
-            ? calculateHourlyPrice(pricing, parseInt(hours), distanceMiles)
+            ? calculateHourlyPrice(pricing, parseFloat(hours), distanceMiles)
             : calculateP2PPrice(pricing, distanceMiles);
 
           // Get congestion charge from pricing config
@@ -794,7 +906,7 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
       pickupTime,
       bookingType: isAirportJourney ? "airport" : bookingType,
       isAirportJourney,
-      hours: bookingType === "hourly" ? parseInt(hours) : null,
+      hours: bookingType === "hourly" ? parseFloat(hours) : null,
       coverageZone,
     },
 

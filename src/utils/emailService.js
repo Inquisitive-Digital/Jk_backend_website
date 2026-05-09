@@ -298,7 +298,7 @@ export const sendWelcomeEmail = async (bookingData) => {
                 <p>Your booking details are being processed. Please complete your payment to confirm your reservation.</p>
                 
                 <div class="section">
-                    <div class="section-title">📍 Journey Details</div>
+                    <div class="section-title"> Journey Details</div>
                     <table>
                         <tr>
                             <td class="detail-label">Pickup Location:</td>
@@ -327,7 +327,7 @@ export const sendWelcomeEmail = async (bookingData) => {
                 </div>
                 
                 <div class="section">
-                    <div class="section-title">🚗 Selected Vehicle</div>
+                    <div class="section-title"> Selected Vehicle</div>
                     <table>
                         <tr>
                             <td class="detail-label">Vehicle:</td>
@@ -361,7 +361,7 @@ export const sendWelcomeEmail = async (bookingData) => {
                 
                 ${bookingData.isAirportPickup && bookingData.flightDetails?.flightNumber ? `
                 <div class="section">
-                    <div class="section-title">✈️ Flight Information</div>
+                    <div class="section-title"> Flight Information</div>
                     <p style="margin: 0; font-size: 14px;">
                         Flight <strong>${bookingData.flightDetails.flightNumber}</strong> - We will monitor your flight and adjust pickup time if there are any delays.
                     </p>
@@ -373,8 +373,8 @@ export const sendWelcomeEmail = async (bookingData) => {
                 <p class="footer-text">Questions? We're here to help!</p>
                 <div class="contact-info">
                     <strong>JK Executive Chauffeurs</strong><br>
-                    📞 Call us: +44 XXX XXX XXXX<br>
-                    ✉️ Email: info@jkexecutive.co.uk
+                    📞 Call us: +44 (0) 203 475 9906<br>
+                    ✉️ Email: info@jkexecutivechauffeurs.com
                 </div>
                 <p class="footer-text" style="margin-top: 20px; font-size: 11px; color: #a0aec0;">
                     This email was sent to ${passenger.email}. If you did not make this booking, please ignore this email.
@@ -388,7 +388,7 @@ export const sendWelcomeEmail = async (bookingData) => {
     const mailOptions = {
         from: `"JK Executive Chauffeurs" <${process.env.EMAIL_USER}>`,
         to: passenger.email,
-        subject: `Welcome to JK Executive Chauffeurs - Your Journey Awaits! 🚗`,
+        subject: `Welcome to JK Executive Chauffeurs - Your Journey Awaits! `,
         html: htmlContent,
     };
 
@@ -463,7 +463,7 @@ export const sendLeadNotificationToAdmin = async (bookingData) => {
                 </div>
                 
                 <div class="section">
-                    <div class="section-title">📍 Journey Details</div>
+                    <div class="section-title"> Journey Details</div>
                     <table>
                         <tr>
                             <td class="detail-label">Pickup:</td>
@@ -498,7 +498,7 @@ export const sendLeadNotificationToAdmin = async (bookingData) => {
                 </div>
                 
                 <div class="section">
-                    <div class="section-title">🚗 Vehicle Selected</div>
+                    <div class="section-title"> Vehicle Selected</div>
                     <table>
                         <tr>
                             <td class="detail-label">Vehicle:</td>
@@ -513,7 +513,7 @@ export const sendLeadNotificationToAdmin = async (bookingData) => {
                 
                 ${bookingData.isAirportPickup && bookingData.flightDetails ? `
                 <div class="section">
-                    <div class="section-title">✈️ Flight Details</div>
+                    <div class="section-title"> Flight Details</div>
                     <table>
                         <tr>
                             <td class="detail-label">Flight Number:</td>
@@ -635,7 +635,7 @@ export const sendBookingConfirmation = async (bookingData) => {
                 </div>
 
                 <div class="section">
-                    <div class="section-title">📍 Journey Details</div>
+                    <div class="section-title"> Journey Details</div>
                     <table>
                         <tr>
                             <td class="detail-label">Pickup Location:</td>
@@ -664,7 +664,7 @@ export const sendBookingConfirmation = async (bookingData) => {
                 </div>
 
                 <div class="section">
-                    <div class="section-title">🚗 Your Vehicle</div>
+                    <div class="section-title"> Your Vehicle</div>
                     <table>
                         <tr>
                             <td class="detail-label">Vehicle:</td>
@@ -685,7 +685,7 @@ export const sendBookingConfirmation = async (bookingData) => {
                 
                 ${bookingData.isAirportPickup && bookingData.flightDetails?.flightNumber ? `
                 <div class="section">
-                    <div class="section-title">✈️ Flight Information</div>
+                    <div class="section-title">Flight Information</div>
                     <p style="margin: 0; font-size: 14px;">
                         Your flight <strong>${bookingData.flightDetails.flightNumber}</strong> will be tracked. If your flight is delayed, your chauffeur will be there when you land.
                     </p>
@@ -732,11 +732,11 @@ export const sendBookingConfirmation = async (bookingData) => {
                 <p class="footer-text">Need to make changes? Contact us immediately.</p>
                 <div class="contact-info">
                     <strong>JK Executive Chauffeurs</strong><br>
-                    📞 Call us: +44 XXX XXX XXXX<br>
-                    ✉️ Email: info@jkexecutive.co.uk
+                    📞 Call us: +44 (0) 203 475 9906<br>
+                    ✉️ Email: info@jkexecutivechauffeurs.com
                 </div>
                 <p class="footer-text" style="margin-top: 20px; font-size: 11px; color: #a0aec0;">
-                    Booking Reference: ${bookingData.bookingNumber || "JK-XXXXXXX"} | Have a safe journey! ✈️
+                    Booking Reference: ${bookingData.bookingNumber || "JK-XXXXXXX"} | Have a safe journey! 
                 </p>
             </div>
         </div>
@@ -833,7 +833,7 @@ export const sendNewBookingToAdmin = async (bookingData, paymentDetails = {}) =>
                 </div>
                 
                 <div class="section">
-                    <div class="section-title">📍 Journey Details</div>
+                    <div class="section-title"> Journey Details</div>
                     <table>
                         <tr>
                             <td class="detail-label">Pickup:</td>
@@ -868,7 +868,7 @@ export const sendNewBookingToAdmin = async (bookingData, paymentDetails = {}) =>
                 </div>
                 
                 <div class="section">
-                    <div class="section-title">🚗 Vehicle Assigned</div>
+                    <div class="section-title"> Vehicle Assigned</div>
                     <table>
                         <tr>
                             <td class="detail-label">Vehicle:</td>
@@ -883,7 +883,7 @@ export const sendNewBookingToAdmin = async (bookingData, paymentDetails = {}) =>
                 
                 ${bookingData.isAirportPickup && bookingData.flightDetails ? `
                 <div class="section">
-                    <div class="section-title">✈️ Flight Details</div>
+                    <div class="section-title"> Flight Details</div>
                     <table>
                         <tr>
                             <td class="detail-label">Flight Number:</td>

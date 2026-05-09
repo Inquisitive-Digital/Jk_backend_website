@@ -96,6 +96,22 @@ const airportPricingSchema = new mongoose.Schema(
                 default: 0,
                 // Charge when DROPPING OFF at this airport
             },
+
+            // Car park charge (for hourly/location bookings)
+            carParkCharge: {
+                type: Number,
+                default: 0,
+            },
+        },
+
+        // ----- Hourly Pricing (optional, for special locations that also offer hourly hire) -----
+        hourly: {
+            hourlyRate: { type: Number, default: 0 },
+            minimumHours: { type: Number, default: 3 },
+            additionalHourCharge: { type: Number, default: 0 },
+            milesIncluded: { type: Number, default: 40 },
+            excessMileageCharge: { type: Number, default: 0 },
+            isActive: { type: Boolean, default: false }, // false = not configured
         },
 
         // ----- Display Settings -----

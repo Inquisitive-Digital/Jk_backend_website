@@ -7,7 +7,7 @@ import { deleteFile } from "../middlewares/multer.js";
 // @access  Admin
 export const createService = async (req, res) => {
     try {
-        const { title, subtitle, category, slug, description, longDescription, features, isActive, priority } = req.body;
+        const { title, subtitle, category, slug, description, longDescription, features, sections, faqs, script, isActive, priority, meta_title, meta_description } = req.body;
 
         // Build image object
         let image = {};
@@ -39,6 +39,26 @@ export const createService = async (req, res) => {
             }
         }
 
+        // Parse sections if sent as JSON string
+        let parsedSections = sections;
+        if (typeof sections === "string") {
+            try {
+                parsedSections = JSON.parse(sections);
+            } catch {
+                parsedSections = [];
+            }
+        }
+
+        // Parse faqs if sent as JSON string
+        let parsedFaqs = faqs;
+        if (typeof faqs === "string") {
+            try {
+                parsedFaqs = JSON.parse(faqs);
+            } catch {
+                parsedFaqs = [];
+            }
+        }
+
         const service = await Service.create({
             title,
             subtitle,
@@ -48,8 +68,13 @@ export const createService = async (req, res) => {
             longDescription: longDescription || "",
             image,
             features: parsedFeatures || [],
+            sections: parsedSections || [],
+            faqs: parsedFaqs || [],
+            script: script || "",
             isActive: isActive !== undefined ? isActive : true,
             priority: priority || 0,
+            meta_title: meta_title || "",
+            meta_description: meta_description || "",
         });
 
         res.status(201).json({
@@ -75,6 +100,83 @@ export const createService = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error creating service",
+            error: error.message,
+        });
+    }
+};
+
+// @desc    Get all services for admin panel (includes inactive)
+// @route   GET /api/services/admin/all?page=1&limit=20&search=
+// @access  Admin
+export const getAllServicesAdmin = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        // Build search filter — if ?search= is provided, apply regex across key fields
+        const searchTerm = req.query.search?.trim();
+        const filter = searchTerm
+            ? {
+                  $or: [
+                      { title: { $regex: searchTerm, $options: "i" } },
+                      { slug: { $regex: searchTerm, $options: "i" } },
+                      { category: { $regex: searchTerm, $options: "i" } },
+                      { subtitle: { $regex: searchTerm, $options: "i" } },
+                  ],
+              }
+            : {};
+
+        const [services, total] = await Promise.all([
+            Service.find(filter)
+                .sort({ priority: 1, createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            Service.countDocuments(filter),
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        res.status(200).json({
+            success: true,
+            services,
+            totalPages,
+            total,
+            page,
+        });
+    } catch (error) {
+        console.error("Error fetching services (admin):", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching services",
+            error: error.message,
+        });
+    }
+};
+
+// @desc    Get single service by ID (admin edit form)
+// @route   GET /api/services/admin/:id
+// @access  Admin
+export const getServiceById = async (req, res) => {
+    try {
+        const service = await Service.findById(req.params.id);
+
+        if (!service) {
+            return res.status(404).json({
+                success: false,
+                message: "Service not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            service,
+        });
+    } catch (error) {
+        console.error("Error fetching service by ID:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching service",
             error: error.message,
         });
     }
@@ -167,7 +269,7 @@ export const updateService = async (req, res) => {
             });
         }
 
-        const { title, subtitle, category, slug, description, longDescription, features, isActive, priority } = req.body;
+        const { title, subtitle, category, slug, description, longDescription, features, sections, faqs, script, isActive, priority, meta_title, meta_description } = req.body;
 
         // Update fields
         if (title) service.title = title;
@@ -178,6 +280,9 @@ export const updateService = async (req, res) => {
         if (longDescription !== undefined) service.longDescription = longDescription;
         if (isActive !== undefined) service.isActive = isActive;
         if (priority !== undefined) service.priority = priority;
+        if (meta_title !== undefined) service.meta_title = meta_title;
+        if (meta_description !== undefined) service.meta_description = meta_description;
+        if (script !== undefined) service.script = script;
 
         // Parse and update features
         if (features) {
@@ -190,6 +295,32 @@ export const updateService = async (req, res) => {
                 }
             }
             service.features = parsedFeatures;
+        }
+
+        // Parse and update sections
+        if (sections !== undefined) {
+            let parsedSections = sections;
+            if (typeof sections === "string") {
+                try {
+                    parsedSections = JSON.parse(sections);
+                } catch {
+                    parsedSections = [];
+                }
+            }
+            service.sections = parsedSections;
+        }
+
+        // Parse and update faqs
+        if (faqs !== undefined) {
+            let parsedFaqs = faqs;
+            if (typeof faqs === "string") {
+                try {
+                    parsedFaqs = JSON.parse(faqs);
+                } catch {
+                    parsedFaqs = [];
+                }
+            }
+            service.faqs = parsedFaqs;
         }
 
         // Update image if new one uploaded
@@ -299,20 +430,6 @@ export const getNavMenu = async (req, res) => {
         // Build menu structure
         const menu = categoryOrder.map((cat) => {
             const categoryServices = grouped[cat] || [];
-
-            // For "Airport Travel" — inject airports as children
-            if (cat === "Airport Travel") {
-                const airportChildren = airports.map((a) => ({
-                    label: a.iataCode ? `${a.name}` : a.name,
-                    href: `/services/airport-transfers`,
-                }));
-
-                return {
-                    label: cat,
-                    href: categoryServices.length > 0 ? categoryServices[0].href : "/services",
-                    children: airportChildren,
-                };
-            }
 
             // For categories with multiple services — show as sub-dropdown
             if (categoryServices.length > 1) {

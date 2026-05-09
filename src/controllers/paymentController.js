@@ -125,65 +125,16 @@ export const createPaymentIntent = async (req, res) => {
             }
         }
 
-        // Build comprehensive metadata for Stripe dashboard
+        // Stripe metadata — only customer identity fields for fraud detection
         const metadata = {
-            // Customer Information
             customer_name: customerName,
             customer_email: customerEmail,
             customer_phone: customerPhone,
-            number_of_passengers: String(passengerDetails.numberOfPassengers || 1),
-            number_of_children: String(numberOfChildren || 0),
-            number_of_suitcases: String(passengerDetails.numberOfSuitcases || 0),
-
-            // Journey Details
-            pickup_address: bookingData?.pickup?.address || bookingData?.pickup || '',
-            dropoff_address: bookingData?.dropoff?.address || bookingData?.dropoff || '',
-            pickup_date: bookingData?.pickupDate || '',
-            pickup_time: bookingData?.pickupTime || '',
-            service_type: bookingData?.serviceType || 'oneway',
-
-            // Vehicle Details
-            vehicle_name: vehicleDetails.categoryName || '',
-            vehicle_details: vehicleDetails.categoryDetails || '',
-            vehicle_passengers: String(vehicleDetails.numberOfPassengers || ''),
-            vehicle_luggage: String(vehicleDetails.numberOfBigLuggage || ''),
-
-            // Pricing Breakdown
-            base_price: String(pricing.basePrice || 0),
-            airport_charges: String(pricing.airportCharges || 0),
-            congestion_charge: String(pricing.congestionCharge || 0),
-            vat_rate: String(pricing.vatRate || 20),
-            tax_amount: String(pricing.tax || 0),
-            total_price: String(pricing.totalPrice || amount),
-
-            // Flight Details (if airport pickup)
-            is_airport_pickup: String(bookingData?.isAirportPickup || false),
-            flight_number: bookingData?.flightDetails?.flightNumber || '',
-            name_board: bookingData?.flightDetails?.nameBoard || '',
-
-            // Guest Details (if booking for someone else)
-            is_booking_for_guest: String(bookingData?.isBookingForSomeoneElse || false),
-            guest_name: bookingData?.guestDetails ?
-                `${bookingData.guestDetails.firstName || ''} ${bookingData.guestDetails.lastName || ''}`.trim() : '',
-            guest_phone: bookingData?.guestDetails ?
-                `${bookingData.guestDetails.countryCode || ''}${bookingData.guestDetails.phone || ''}`.trim() : '',
-
-            // Special Instructions
-            special_instructions: bookingData?.specialInstructions || '',
-
-            // Mode indicator
-            payment_mode: isTestMode ? 'TEST' : 'LIVE',
         };
 
-        // Remove empty metadata fields (Stripe has 500 char limit per field)
+        // Remove empty fields so Stripe doesn't show blank entries
         Object.keys(metadata).forEach(key => {
-            if (!metadata[key] || metadata[key] === 'undefined') {
-                delete metadata[key];
-            }
-            // Truncate long values
-            if (metadata[key] && metadata[key].length > 450) {
-                metadata[key] = metadata[key].substring(0, 450) + '...';
-            }
+            if (!metadata[key]) delete metadata[key];
         });
 
         // Payment Intent options

@@ -4,10 +4,10 @@ import Blog from "../models/blog.model.js";
 export const createBlog = async (req, res) => {
     try {
         const {
-            title, slug, intro, excerpt, sections,
+            title, slug, intro, excerpt, sections, faqs,
             heroImageUrl, heroImageAlt,
             author, category, tags,
-            seoTitle, seoDescription,
+            seoTitle, seoDescription, script,
             isActive, priority, publishDate,
         } = req.body;
 
@@ -21,6 +21,7 @@ export const createBlog = async (req, res) => {
             category,
             seoTitle,
             seoDescription,
+            script,
             isActive: isActive !== undefined ? isActive : true,
             priority: priority || 0,
         };
@@ -37,6 +38,11 @@ export const createBlog = async (req, res) => {
         // Handle tags array
         if (tags) {
             blogData.tags = typeof tags === "string" ? JSON.parse(tags) : tags;
+        }
+
+        // Handle faqs array
+        if (faqs) {
+            blogData.faqs = typeof faqs === "string" ? JSON.parse(faqs) : faqs;
         }
 
         // Handle file upload for heroImage
@@ -113,6 +119,67 @@ export const getAllBlogs = async (req, res) => {
     }
 };
 
+// Get ALL blog posts for admin (paginated, includes inactive)
+export const getAllBlogsAdmin = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        // Build search filter — if ?search= is provided, apply regex across key fields
+        const searchTerm = req.query.search?.trim();
+        const filter = searchTerm
+            ? {
+                  $or: [
+                      { title: { $regex: searchTerm, $options: "i" } },
+                      { slug: { $regex: searchTerm, $options: "i" } },
+                      { category: { $regex: searchTerm, $options: "i" } },
+                      { author: { $regex: searchTerm, $options: "i" } },
+                  ],
+              }
+            : {};
+
+        const [blogs, total] = await Promise.all([
+            Blog.find(filter)
+                .sort({ priority: 1, publishDate: -1, createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .select("-sections -__v"),
+            Blog.countDocuments(filter),
+        ]);
+
+        res.status(200).json({
+            success: true,
+            count: blogs.length,
+            total,
+            totalPages: Math.ceil(total / limit),
+            currentPage: page,
+            blogs,
+        });
+    } catch (error) {
+        console.error("Error fetching blogs (admin):", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching blog posts",
+            error: error.message,
+        });
+    }
+};
+
+// Get single blog by ID (admin use — no isActive filter)
+export const getBlogById = async (req, res) => {
+    try {
+        const blog = await Blog.findById(req.params.id).select("-__v");
+        if (!blog) {
+            return res.status(404).json({ success: false, message: "Blog post not found" });
+        }
+        res.status(200).json({ success: true, blog });
+    } catch (error) {
+        console.error("Error fetching blog by id:", error);
+        res.status(500).json({ success: false, message: "Error fetching blog post", error: error.message });
+    }
+};
+
 // Get blog post by slug
 export const getBlogBySlug = async (req, res) => {
     try {
@@ -160,6 +227,9 @@ export const updateBlog = async (req, res) => {
         }
         if (updateData.sections && typeof updateData.sections === "string") {
             updateData.sections = JSON.parse(updateData.sections);
+        }
+        if (updateData.faqs && typeof updateData.faqs === "string") {
+            updateData.faqs = JSON.parse(updateData.faqs);
         }
 
         if (req.files?.heroImage?.[0]) {

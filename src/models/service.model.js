@@ -41,6 +41,33 @@ const serviceSchema = new mongoose.Schema(
             default: "",
         },
 
+        // STRUCTURED CONTENT — same pattern as blog.model.js
+        // Each section: heading (H2), subheading (H3), paragraph text (HTML, supports <a> links),
+        // bullet list items (HTML), and an optional inline image
+        sections: [
+            {
+                heading:    { type: String, trim: true },      // H2
+                subheading: { type: String, trim: true },       // H3 (optional)
+                text:       { type: String },                   // paragraph HTML (supports <a>, <b>, etc.)
+                listItems:  [{ type: String }],                 // bullet points (HTML)
+                image: {
+                    url: { type: String },
+                    alt: { type: String },
+                },
+                subsections: [                                // NEW: Multiple subheadings
+                    {
+                        subheading: { type: String, trim: true },
+                        text: { type: String },
+                        listItems: [{ type: String }],
+                        image: {
+                            url: { type: String },
+                            alt: { type: String },
+                        },
+                    }
+                ]
+            },
+        ],
+
         // Service Image
         image: {
             url: { type: String, required: true },
@@ -52,6 +79,35 @@ const serviceSchema = new mongoose.Schema(
             {
                 type: String,
                 trim: true,
+            },
+        ],
+
+        // SEO Meta
+        meta_title: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+
+        meta_description: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+
+        // JSON-LD structured data (script tag content for SEO)
+        script: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+
+        // FAQs — per-service FAQ items (optional)
+        faqs: [
+            {
+                question: { type: String, trim: true },
+                answer:   { type: String, trim: true },
+                tag:      { type: String, trim: true, default: "FAQ" },
             },
         ],
 

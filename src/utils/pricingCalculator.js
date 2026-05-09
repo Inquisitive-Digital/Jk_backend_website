@@ -562,3 +562,97 @@ export const calculateAirportPrice = (airportPricing, distanceMiles, options = {
     priceRoundedOff: airportPricing.priceRoundOff,
   };
 };
+
+// =============================================================================
+// AIRPORT HOURLY PRICING CALCULATION
+// =============================================================================
+/**
+ * Calculate hourly price for a special location (airport/stadium) journey.
+ * Uses the `hourly` sub-document stored on the AirportPricing record.
+ *
+ * @param {Object} airportPricing - The AirportPricing document from DB
+ * @param {number} hours - Number of hours booked
+ * @param {number} distanceMiles - Estimated distance in miles
+ * @returns {Object} - Complete price breakdown
+ */
+export const calculateAirportHourlyPrice = (airportPricing, hours, distanceMiles = 0) => {
+  const hourlyConfig = airportPricing.hourly;
+  const extras = airportPricing.extras || {};
+
+  if (!hourlyConfig || !hourlyConfig.isActive || hourlyConfig.hourlyRate <= 0) {
+    return null; // Not configured — caller should fall back to standard pricing
+  }
+
+  const hourlyRate = hourlyConfig.hourlyRate || 0;
+  const minimumHours = hourlyConfig.minimumHours || 3;
+  const additionalHourCharge = hourlyConfig.additionalHourCharge || hourlyRate;
+  const milesIncluded = hourlyConfig.milesIncluded || 0;
+  const excessMileageCharge = hourlyConfig.excessMileageCharge || 0;
+
+  let breakdownParts = [];
+
+  // Base charge: minimum hours × hourly rate
+  const baseCharge = minimumHours * hourlyRate;
+  breakdownParts.push(`Base: ${minimumHours} hrs × £${hourlyRate}/hr = £${baseCharge.toFixed(2)}`);
+
+  // Extra hours charge
+  let extraHourChargeTotal = 0;
+  if (hours > minimumHours) {
+    const extraHours = hours - minimumHours;
+    extraHourChargeTotal = extraHours * additionalHourCharge;
+    breakdownParts.push(`Extra: ${extraHours} hrs × £${additionalHourCharge}/hr = £${extraHourChargeTotal.toFixed(2)}`);
+  }
+
+  // Car park charge — added into base fare if present
+  const carParkCharge = extras?.carParkCharge || 0;
+  if (carParkCharge > 0) {
+    breakdownParts.push(`Car park charge: £${carParkCharge.toFixed(2)}`);
+  }
+
+  // Combined base (hours + parking) — this is what the frontend shows as "BASE FARE"
+  const combinedBaseCharge = baseCharge + extraHourChargeTotal + carParkCharge;
+
+  // Excess mileage charge (separate, added after base)
+  let excessMileageChargeTotal = 0;
+  if (distanceMiles > milesIncluded && excessMileageCharge > 0) {
+    const excessMiles = distanceMiles - milesIncluded;
+    excessMileageChargeTotal = excessMiles * excessMileageCharge;
+    breakdownParts.push(`Excess miles: ${excessMiles.toFixed(1)} × £${excessMileageCharge}/mile = £${excessMileageChargeTotal.toFixed(2)}`);
+  }
+
+  // Congestion charge (separate, added after base)
+  const congestionCharge = extras.congestionCharge || 0;
+  if (congestionCharge > 0) {
+    breakdownParts.push(`Congestion charge: £${congestionCharge.toFixed(2)}`);
+  }
+
+  // Journey subtotal = combinedBase + excess mileage + congestion
+  const journeyTotal = combinedBaseCharge + excessMileageChargeTotal + congestionCharge;
+
+  // VAT applied on the full journey total (normal flow)
+  const vatRate = 0.20;
+  const vatAmount = airportPricing.displayVATInclusive ? journeyTotal * vatRate : 0;
+
+  let totalPrice = journeyTotal + vatAmount;
+  if (airportPricing.priceRoundOff) {
+    totalPrice = Math.round(totalPrice);
+  }
+
+  return {
+    baseCharge: roundPrice(combinedBaseCharge),   // BASE FARE = hours + extra hours + car park
+    extraHourCharge: roundPrice(extraHourChargeTotal),
+    excessMileageCharge: roundPrice(excessMileageChargeTotal),
+    congestionCharge: roundPrice(congestionCharge),
+    carParkCharge: roundPrice(carParkCharge),
+    subtotal: roundPrice(journeyTotal),
+    vatRate: vatRate * 100,
+    vatAmount: roundPrice(vatAmount),
+    vatInclusive: airportPricing.displayVATInclusive,
+    totalPrice: roundPrice(totalPrice),
+    minimumHours,
+    hourlyRate,
+    milesIncluded,
+    breakdown: breakdownParts.join(" + "),
+    priceRoundedOff: airportPricing.priceRoundOff,
+  };
+};
