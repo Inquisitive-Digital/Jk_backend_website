@@ -1528,6 +1528,86 @@ export const sendBulkQuoteRequestToAdmin = async ({ name, email, enquiry }) => {
     }
 };
 
+/**
+ * Send Car Quote Emails (to user and admin)
+ */
+export const sendCarQuoteEmails = async ({ name, email, phone, carName, message }) => {
+    const transporter = createTransporter();
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
+
+    // 1. Send confirmation to user
+    const userMailOptions = {
+        from: `"JK Executive Chauffeurs" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: `Quote Request Received - ${carName}`,
+        html: `
+        <div style="${emailStyles}">
+            <div class="container">
+                <div class="header">
+                    <h1>JK EXECUTIVE CHAUFFEURS</h1>
+                </div>
+                <div class="content">
+                    <p class="greeting">Dear ${name},</p>
+                    <p>Thank you for your interest in our services! We have received your quote request for <strong>${carName}</strong>.</p>
+                    <p>Our team will review your requirements and get back to you with a competitive quote shortly.</p>
+                    <div class="section">
+                        <div class="section-title">Your Request Summary</div>
+                        <p><strong>Car:</strong> ${carName}</p>
+                        ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}
+                        ${message ? `<p><strong>Message:</strong> ${message}</p>` : ""}
+                    </div>
+                    <p>Thank you for choosing JK Executive Chauffeurs.</p>
+                </div>
+                <div class="footer">
+                    <p>JK Executive Chauffeurs | Premium Chauffeur Services</p>
+                </div>
+            </div>
+        </div>
+        `,
+    };
+
+    // 2. Send notification to admin
+    const adminMailOptions = {
+        from: `"JK Booking System" <${process.env.EMAIL_USER}>`,
+        to: adminEmail,
+        subject: `NEW QUOTE REQUEST: ${carName} from ${name}`,
+        html: `
+        <div style="${emailStyles}">
+            <div class="container">
+                <div class="header">
+                    <h1>NEW QUOTE REQUEST</h1>
+                </div>
+                <div class="content">
+                    <p>A new quote request has been submitted for <strong>${carName}</strong>.</p>
+                    <div class="section">
+                        <div class="section-title">Customer Details</div>
+                        <p><strong>Name:</strong> ${name}</p>
+                        <p><strong>Email:</strong> ${email}</p>
+                        <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
+                    </div>
+                    <div class="section">
+                        <div class="section-title">Message</div>
+                        <p>${message || "No additional message."}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `,
+    };
+
+    try {
+        await Promise.all([
+            transporter.sendMail(userMailOptions),
+            transporter.sendMail(adminMailOptions)
+        ]);
+        console.log(`✅ Quote emails sent for: ${carName}`);
+        return { success: true };
+    } catch (error) {
+        console.error("❌ Failed to send quote emails:", error);
+        return { success: false, error: error.message };
+    }
+};
+
 export default {
     sendWelcomeEmail,
     sendLeadNotificationToAdmin,
@@ -1535,4 +1615,5 @@ export default {
     sendNewBookingToAdmin,
     sendContactInquiryToAdmin,
     sendBulkQuoteRequestToAdmin,
+    sendCarQuoteEmails,
 };

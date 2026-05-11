@@ -1,4 +1,4 @@
-import { sendContactInquiryToAdmin, sendBulkQuoteRequestToAdmin } from "../utils/emailService.js";
+import { sendContactInquiryToAdmin, sendBulkQuoteRequestToAdmin, sendCarQuoteEmails } from "../utils/emailService.js";
 
 
 /**
@@ -106,6 +106,49 @@ export const submitBulkQuoteRequest = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Something went wrong. Please try again.",
+            error: error.message,
+        });
+    }
+};
+
+/**
+ * Handle Car Specific Quote Request
+ */
+export const submitCarQuoteRequest = async (req, res) => {
+    try {
+        const { name, email, phone, carName, message } = req.body;
+
+        if (!name || !email || !carName) {
+            return res.status(400).json({
+                success: false,
+                message: "Name, email, and car name are required.",
+            });
+        }
+
+        // Send emails (to user and admin)
+        const result = await sendCarQuoteEmails({
+            name,
+            email,
+            phone,
+            carName,
+            message,
+        });
+
+        if (!result.success) {
+            return res.status(500).json({
+                success: false,
+                message: "Failed to send quote request.",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Quote request sent successfully! We will contact you shortly.",
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Something went wrong.",
             error: error.message,
         });
     }
