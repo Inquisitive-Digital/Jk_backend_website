@@ -1531,9 +1531,16 @@ export const sendBulkQuoteRequestToAdmin = async ({ name, email, enquiry }) => {
 /**
  * Send Car Quote Emails (to user and admin)
  */
-export const sendCarQuoteEmails = async ({ name, email, phone, carName, message }) => {
+export const sendCarQuoteEmails = async (quoteData) => {
+    const { name, email, phone, carName, message, bookingData } = quoteData;
     const transporter = createTransporter();
     const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
+    
+    const isHourly = bookingData?.serviceType === "hourly";
+    const pickupDate = formatDate(bookingData?.pickupDate);
+    const pickupTime = bookingData?.pickupTime || "—";
+    const pickupAddr = bookingData?.pickup || "—";
+    const dropoffAddr = isHourly ? pickupAddr : (bookingData?.dropoff || "—");
 
     // 1. Send confirmation to user
     const userMailOptions = {
@@ -1541,28 +1548,84 @@ export const sendCarQuoteEmails = async ({ name, email, phone, carName, message 
         to: email,
         subject: `Quote Request Received - ${carName}`,
         html: `
-        <div style="${emailStyles}">
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>${emailStyles}</style>
+        </head>
+        <body>
             <div class="container">
                 <div class="header">
                     <h1>JK EXECUTIVE CHAUFFEURS</h1>
+                    <p class="tagline">Premium Chauffeur Services</p>
                 </div>
+                
                 <div class="content">
                     <p class="greeting">Dear ${name},</p>
-                    <p>Thank you for your interest in our services! We have received your quote request for <strong>${carName}</strong>.</p>
-                    <p>Our team will review your requirements and get back to you with a competitive quote shortly.</p>
+                    
+                    <p>Thank you for your interest in our services! We have received your quote request for our <strong>${carName}</strong>.</p>
+                    
+                    <p>Our team will review your requirements and get back to you with a personalised quote shortly.</p>
+                    
                     <div class="section">
-                        <div class="section-title">Your Request Summary</div>
-                        <p><strong>Car:</strong> ${carName}</p>
-                        ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}
-                        ${message ? `<p><strong>Message:</strong> ${message}</p>` : ""}
+                        <div class="section-title">Request Summary</div>
+                        <table>
+                            <tr>
+                                <td class="detail-label">Vehicle:</td>
+                                <td class="detail-value">${carName}</td>
+                            </tr>
+                            <tr>
+                                <td class="detail-label">Pickup:</td>
+                                <td class="detail-value">${pickupAddr}</td>
+                            </tr>
+                            ${!isHourly ? `
+                            <tr>
+                                <td class="detail-label">Dropoff:</td>
+                                <td class="detail-value">${dropoffAddr}</td>
+                            </tr>
+                            ` : `
+                            <tr>
+                                <td class="detail-label">Service:</td>
+                                <td class="detail-value">Hourly Booking (${bookingData?.hours || 2} hours)</td>
+                            </tr>
+                            `}
+                            <tr>
+                                <td class="detail-label">Date:</td>
+                                <td class="detail-value">${pickupDate}</td>
+                            </tr>
+                            <tr>
+                                <td class="detail-label">Time:</td>
+                                <td class="detail-value">${pickupTime}</td>
+                            </tr>
+                        </table>
                     </div>
-                    <p>Thank you for choosing JK Executive Chauffeurs.</p>
+
+                    ${message ? `
+                    <div class="section">
+                        <div class="section-title">Additional Message</div>
+                        <p style="font-size: 13px; color: #444; font-style: italic;">"${message}"</p>
+                    </div>
+                    ` : ""}
+
+                    <div class="highlight-box">
+                        <p style="margin: 0; font-size: 14px;">
+                            <strong>✅ Request Captured:</strong> We will get back to you soon with your personalised quote.
+                        </p>
+                    </div>
                 </div>
+                
                 <div class="footer">
-                    <p>JK Executive Chauffeurs | Premium Chauffeur Services</p>
+                    <p class="footer-text">Questions? We're here to help!</p>
+                    <div class="contact-info">
+                        <strong>JK Executive Chauffeurs</strong><br>
+                        📞 +44 (0) 203 475 9906<br>
+                        ✉️ info@jkexecutivechauffeurs.com
+                    </div>
                 </div>
             </div>
-        </div>
+        </body>
+        </html>
         `,
     };
 
@@ -1572,26 +1635,81 @@ export const sendCarQuoteEmails = async ({ name, email, phone, carName, message 
         to: adminEmail,
         subject: `NEW QUOTE REQUEST: ${carName} from ${name}`,
         html: `
-        <div style="${emailStyles}">
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>${emailStyles}</style>
+        </head>
+        <body>
             <div class="container">
-                <div class="header">
+                <div class="header" style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);">
                     <h1>NEW QUOTE REQUEST</h1>
+                    <p class="tagline">Immediate Action Required</p>
                 </div>
+                
                 <div class="content">
-                    <p>A new quote request has been submitted for <strong>${carName}</strong>.</p>
-                    <div class="section">
-                        <div class="section-title">Customer Details</div>
-                        <p><strong>Name:</strong> ${name}</p>
-                        <p><strong>Email:</strong> ${email}</p>
-                        <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
+                    <p style="font-size: 16px; color: #374151;">A new quote request has been submitted for <strong>${carName}</strong>.</p>
+                    
+                    <div class="section admin-alert" style="border-left-color: #D7B75E;">
+                        <div class="section-title" style="color: #B9994A;">👤 Customer Details</div>
+                        <table>
+                            <tr>
+                                <td class="detail-label">Name:</td>
+                                <td class="detail-value">${name}</td>
+                            </tr>
+                            <tr>
+                                <td class="detail-label">Email:</td>
+                                <td class="detail-value"><a href="mailto:${email}">${email}</a></td>
+                            </tr>
+                            <tr>
+                                <td class="detail-label">Phone:</td>
+                                <td class="detail-value"><a href="tel:${phone}">${phone || "Not provided"}</a></td>
+                            </tr>
+                        </table>
                     </div>
+                    
+                    <div class="section">
+                        <div class="section-title">Journey Details</div>
+                        <table>
+                            <tr>
+                                <td class="detail-label">Pickup:</td>
+                                <td class="detail-value">${pickupAddr}</td>
+                            </tr>
+                            ${!isHourly ? `
+                            <tr>
+                                <td class="detail-label">Dropoff:</td>
+                                <td class="detail-value">${dropoffAddr}</td>
+                            </tr>
+                            ` : `
+                            <tr>
+                                <td class="detail-label">Service:</td>
+                                <td class="detail-value">Hourly Booking (${bookingData?.hours || 2} hours)</td>
+                            </tr>
+                            `}
+                            <tr>
+                                <td class="detail-label">Date:</td>
+                                <td class="detail-value">${pickupDate}</td>
+                            </tr>
+                            <tr>
+                                <td class="detail-label">Time:</td>
+                                <td class="detail-value">${pickupTime}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
                     <div class="section">
                         <div class="section-title">Message</div>
-                        <p>${message || "No additional message."}</p>
+                        <p style="margin: 0; font-size: 14px;">${message || "No additional message."}</p>
                     </div>
                 </div>
+                
+                <div class="footer">
+                    <p class="footer-text">JK Executive Chauffeurs Booking System</p>
+                </div>
             </div>
-        </div>
+        </body>
+        </html>
         `,
     };
 

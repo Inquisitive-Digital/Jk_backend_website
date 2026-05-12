@@ -116,7 +116,7 @@ export const submitBulkQuoteRequest = async (req, res) => {
  */
 export const submitCarQuoteRequest = async (req, res) => {
     try {
-        const { name, email, phone, carName, message } = req.body;
+        const { name, email, phone, carName, message, bookingData } = req.body;
 
         if (!name || !email || !carName) {
             return res.status(400).json({
@@ -132,6 +132,7 @@ export const submitCarQuoteRequest = async (req, res) => {
             phone,
             carName,
             message,
+            bookingData,
         });
 
         if (!result.success) {
