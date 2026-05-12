@@ -1,5 +1,5 @@
 import express from "express";
-import { submitContactInquiry, submitBulkQuoteRequest } from "../controllers/contactController.js";
+import { submitContactInquiry, submitBulkQuoteRequest, submitCarQuoteRequest } from "../controllers/contactController.js";
 
 const router = express.Router();
 
@@ -9,5 +9,7 @@ router.post("/", submitContactInquiry);
 // POST /api/contact/quote  — bulk/corporate booking quote request
 router.post("/quote", submitBulkQuoteRequest);
 
-export default router;
+// POST /api/contact/car-quote — individual car quote request
+router.post("/car-quote", submitCarQuoteRequest);
 
+export default router;

@@ -6,7 +6,6 @@ const ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:5000",
     "http://127.0.0.1:5173",
-    "https://jk-frontend-nine.vercel.app",
     "https://jkexecutivechauffeurs.com",
     "https://www.jkexecutivechauffeurs.com",
     "http://jkexecutivechauffeurs.com/",

@@ -1,4 +1,5 @@
-import { sendContactInquiryToAdmin, sendBulkQuoteRequestToAdmin } from "../utils/emailService.js";
+import { sendContactInquiryToAdmin, sendBulkQuoteRequestToAdmin, sendCarQuoteEmails } from "../utils/emailService.js";
+import { Booking } from "../models/booking.model.js";
 
 
 /**
@@ -106,6 +107,87 @@ export const submitBulkQuoteRequest = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Something went wrong. Please try again.",
+            error: error.message,
+        });
+    }
+};
+
+/**
+ * Handle Car Specific Quote Request
+ */
+export const submitCarQuoteRequest = async (req, res) => {
+    try {
+        const { name, email, phone, carName, message, bookingData } = req.body;
+
+        if (!name || !email || !carName) {
+            return res.status(400).json({
+                success: false,
+                message: "Name, email, and car name are required.",
+            });
+        }
+
+        // Save as a lead in the Bookings collection
+        try {
+            const nameParts = name.trim().split(" ");
+            const firstName = nameParts[0] || "";
+            const lastName = nameParts.slice(1).join(" ") || "Customer";
+
+            const pickupDate = bookingData?.pickupDate ? new Date(bookingData.pickupDate) : new Date();
+            const pickupTime = bookingData?.pickupTime || "00:00";
+
+            const newLead = new Booking({
+                pickup: { address: bookingData?.pickup || "N/A" },
+                dropoff: { address: bookingData?.dropoff || "" },
+                pickupDate: pickupDate,
+                pickupTime: pickupTime,
+                serviceType: bookingData?.serviceType || "oneway",
+                journeyInfo: {
+                    hours: bookingData?.hours ? Number(bookingData.hours) : undefined
+                },
+                vehicleDetails: {
+                    categoryName: carName,
+                },
+                passengerDetails: {
+                    firstName,
+                    lastName,
+                    email,
+                    phone: phone || "",
+                },
+                specialInstructions: message || "",
+                status: "pending",
+                paymentStatus: "pending"
+            });
+
+            await newLead.save();
+        } catch (dbError) {
+            console.error("Error saving lead to database:", dbError);
+        }
+
+        // Send emails (to user and admin)
+        const result = await sendCarQuoteEmails({
+            name,
+            email,
+            phone,
+            carName,
+            message,
+            bookingData,
+        });
+
+        if (!result.success) {
+            return res.status(500).json({
+                success: false,
+                message: "Failed to send quote request.",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Quote request sent successfully! We will contact you shortly.",
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Something went wrong.",
             error: error.message,
         });
     }

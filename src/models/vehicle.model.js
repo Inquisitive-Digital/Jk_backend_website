@@ -72,6 +72,11 @@ const vehicleSchema = new mongoose.Schema(
       default: true,
     },
 
+    enableGetAQuote: {
+      type: Boolean,
+      default: false,
+    },
+
     // Booking Notice Period (in minutes)
     minimumNoticePeriod: {
       type: Number,
