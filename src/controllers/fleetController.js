@@ -11,6 +11,7 @@ export const createFleet = async (req, res) => {
             specifications, features, vehicleId,
             passengers, luggage, seoTitle, seoDescription,
             isActive, priority, meta_title, meta_description,
+            sections, faqs,
         } = req.body;
 
         // Build hero image
@@ -72,6 +73,8 @@ export const createFleet = async (req, res) => {
             priority: parseInt(priority) || 0,
             meta_title: meta_title || "",
             meta_description: meta_description || "",
+            sections: parseArray(sections),
+            faqs: parseArray(faqs),
         });
 
         res.status(201).json({ success: true, message: "Fleet entry created", fleet });
@@ -210,6 +213,7 @@ export const updateFleet = async (req, res) => {
             specifications, features, vehicleId,
             passengers, luggage, seoTitle, seoDescription,
             isActive, priority, meta_title, meta_description,
+            sections, faqs,
         } = req.body;
 
         if (title) fleet.title = title;
@@ -238,6 +242,8 @@ export const updateFleet = async (req, res) => {
 
         if (specifications) fleet.specifications = parseArray(specifications);
         if (features) fleet.features = parseArray(features);
+        if (sections) fleet.sections = parseArray(sections);
+        if (faqs) fleet.faqs = parseArray(faqs);
 
         // Update hero image
         if (req.files?.heroImage?.[0]) {

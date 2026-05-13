@@ -40,6 +40,33 @@ const fleetSchema = new mongoose.Schema(
             // Full SEO content for detail page
         },
 
+        // STRUCTURED CONTENT — same pattern as blog.model.js and service.model.js
+        // Each section: heading (H2), subheading (H3), paragraph text (HTML),
+        // bullet list items (HTML), and an optional inline image
+        sections: [
+            {
+                heading:    { type: String, trim: true },      // H2
+                subheading: { type: String, trim: true },       // H3 (optional)
+                text:       { type: String },                   // paragraph HTML
+                listItems:  [{ type: String }],                 // bullet points (HTML)
+                image: {
+                    url: { type: String },
+                    alt: { type: String },
+                },
+                subsections: [                                // Multiple subheadings
+                    {
+                        subheading: { type: String, trim: true },
+                        text: { type: String },
+                        listItems: [{ type: String }],
+                        image: {
+                            url: { type: String },
+                            alt: { type: String },
+                        },
+                    }
+                ]
+            },
+        ],
+
         // ----- Images -----
         heroImage: {
             url: { type: String, required: true },
@@ -68,6 +95,15 @@ const fleetSchema = new mongoose.Schema(
                 type: String,
                 trim: true,
                 // e.g. "First class chauffeur", "Free 60 mins airport waiting"
+            },
+        ],
+
+        // FAQs — per-fleet FAQ items (optional)
+        faqs: [
+            {
+                question: { type: String, trim: true },
+                answer:   { type: String, trim: true },
+                tag:      { type: String, trim: true, default: "FAQ" },
             },
         ],
 
