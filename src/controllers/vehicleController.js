@@ -48,6 +48,7 @@ export const createVehicle = TryCatch(async (req, res, next) => {
     preventBookingWithinNoticePeriod = false,
     vehicleType,
     companyFeatures,
+    enableGetAQuote = false,
   } = req.body;
 
   // Validate: Image is required
@@ -114,6 +115,7 @@ export const createVehicle = TryCatch(async (req, res, next) => {
       preventBookingWithinNoticePeriod === true,
     vehicleType,
     companyFeatures: features,
+    enableGetAQuote: enableGetAQuote === "true" || enableGetAQuote === true,
   });
 
   res.status(201).json({
@@ -186,6 +188,17 @@ export const updateVehicle = TryCatch(async (req, res, next) => {
   // Convert minimumNoticePeriod to number if provided
   if (updates.minimumNoticePeriod) {
     updates.minimumNoticePeriod = parseInt(updates.minimumNoticePeriod);
+  }
+
+  // Parse booleans if sent as strings (form-data)
+  if (updates.enableGetAQuote !== undefined) {
+    updates.enableGetAQuote = updates.enableGetAQuote === "true" || updates.enableGetAQuote === true;
+  }
+  if (updates.displayPrice !== undefined) {
+    updates.displayPrice = updates.displayPrice === "true" || updates.displayPrice === true;
+  }
+  if (updates.displayVehicles !== undefined) {
+    updates.displayVehicles = updates.displayVehicles === "true" || updates.displayVehicles === true;
   }
 
   // Check: If category name is being changed, ensure it's unique
@@ -874,6 +887,7 @@ export const getAvailableVehiclesWithFare = TryCatch(async (req, res, next) => {
         vehicleType: vehicle.vehicleType,
         companyFeatures: vehicle.companyFeatures,
         displayPrice: vehicle.displayPrice,
+        enableGetAQuote: vehicle.enableGetAQuote || false,
 
         // PRICING DATA
         pricing: priceData,
