@@ -57,9 +57,25 @@ app.use(cookieParser());
 // rate limiter 
 app.use(apiRateLimiter);
 
+// Fix: normalize backslash paths → forward slashes for Windows-uploaded images
+// This resolves the broken URL: uploads\oldImages\banner131.jpeg
+app.use('/uploads', (req, res, next) => {
+  if (req.url.includes('\\')) {
+    const fixedUrl = req.url.replace(/\\/g, '/');
+    return res.redirect(301, `/uploads${fixedUrl}`);
+  }
+  next();
+});
+
 // Serve static files from uploads directory (Images)
 app.use("/uploads", express.static(path.join(__dirname, "uploads"), {
-  maxAge: "1y" // Cache images for 1 year
+  maxAge: "1y",
+  setHeaders: (res, filePath) => {
+    // All uploaded images are content-addressed (filename = uuid) — safe to cache immutably
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    // Fix: ensure forward-slash paths work correctly on Windows
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
 }));
 
 
@@ -613,11 +629,24 @@ staticPages.forEach(page => {
 
 // React Frontend Static Files (JS, CSS, Images from dist/)
 app.use(express.static(path.join(__dirname, "dist"), {
-  maxAge: "1y", // Cache static assets for 1 year
-  setHeaders: (res, path) => {
-    // DO NOT cache the dynamic index.html so updates are visible immediately!
-    if (path.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache');
+  maxAge: "1y",
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      // Never cache HTML — SPA shell must always be fresh
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else if (
+      filePath.endsWith('.js') ||
+      filePath.endsWith('.css') ||
+      filePath.endsWith('.woff2') ||
+      filePath.endsWith('.woff') ||
+      filePath.endsWith('.webp') ||
+      filePath.endsWith('.png') ||
+      filePath.endsWith('.jpg') ||
+      filePath.endsWith('.jpeg') ||
+      filePath.endsWith('.svg')
+    ) {
+      // Vite hashes all asset filenames — safe to cache immutably
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
   }
 }));
