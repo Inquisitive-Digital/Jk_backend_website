@@ -95,7 +95,7 @@ app.get("/sitemap.xml", async (req, res) => {
     // Serve cached version if still fresh
     if (sitemapState.cache && (now - sitemapState.cacheTime) < SITEMAP_CACHE_TTL_MS) {
       res.setHeader("Content-Type", "application/xml; charset=utf-8");
-      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       return res.send(sitemapState.cache);
     }
 
@@ -195,7 +195,7 @@ app.get("/sitemap.xml", async (req, res) => {
     sitemapState.cacheTime = now;
 
     res.setHeader("Content-Type", "application/xml; charset=utf-8");
-    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     return res.send(xml);
 
   } catch (err) {
