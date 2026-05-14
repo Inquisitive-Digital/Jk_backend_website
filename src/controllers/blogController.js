@@ -1,4 +1,5 @@
 import Blog from "../models/blog.model.js";
+import { sitemapState } from "../utils/sitemapCache.js";
 
 // Create a new blog post
 export const createBlog = async (req, res) => {
@@ -56,6 +57,9 @@ export const createBlog = async (req, res) => {
         }
 
         const blog = await Blog.create(blogData);
+
+        // Bust sitemap cache — new blog will appear on next crawl immediately
+        sitemapState.bust();
 
         res.status(201).json({
             success: true,
@@ -247,6 +251,9 @@ export const updateBlog = async (req, res) => {
             { new: true, runValidators: true }
         );
 
+        // Bust sitemap cache — updated lastmod will reflect immediately
+        sitemapState.bust();
+
         res.status(200).json({
             success: true,
             message: "Blog post updated successfully",
@@ -272,6 +279,9 @@ export const deleteBlog = async (req, res) => {
                 message: "Blog post not found",
             });
         }
+
+        // Bust sitemap cache — deleted blog removed immediately
+        sitemapState.bust();
 
         res.status(200).json({
             success: true,
