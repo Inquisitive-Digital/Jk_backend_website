@@ -35,6 +35,7 @@ import Blog from "./src/models/blog.model.js";
 import { Service } from "./src/models/service.model.js";
 import Event from "./src/models/event.model.js";
 import { Fleet } from "./src/models/fleet.model.js";
+import { sitemapState } from "./src/utils/sitemapCache.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -78,6 +79,130 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/faqs", faqRoutes);
 app.use("/api/calendar-events", calendarEventRoutes);
 
+
+// ================================================================
+// DYNAMIC SITEMAP — auto-updates when blogs/services are added
+// Cached in memory for 60 min; busted immediately on any mutation
+// ================================================================
+
+const SITEMAP_CACHE_TTL_MS = 60 * 60 * 1000; // 60 minutes
+const SITE_URL_SITEMAP = "https://www.jkexecutivechauffeurs.com";
+
+app.get("/sitemap.xml", async (req, res) => {
+  try {
+    const now = Date.now();
+
+    // Serve cached version if still fresh
+    if (sitemapState.cache && (now - sitemapState.cacheTime) < SITEMAP_CACHE_TTL_MS) {
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      return res.send(sitemapState.cache);
+    }
+
+    // ── Static pages ─────────────────────────────────────────
+    const staticUrls = [
+      { loc: `${SITE_URL_SITEMAP}/`,                   changefreq: "weekly",  priority: "1.0" },
+      { loc: `${SITE_URL_SITEMAP}/services`,           changefreq: "weekly",  priority: "0.9" },
+      { loc: `${SITE_URL_SITEMAP}/fleet`,              changefreq: "weekly",  priority: "0.9" },
+      { loc: `${SITE_URL_SITEMAP}/blog`,               changefreq: "daily",   priority: "0.8" },
+      { loc: `${SITE_URL_SITEMAP}/booking`,            changefreq: "monthly", priority: "0.8" },
+      { loc: `${SITE_URL_SITEMAP}/about`,              changefreq: "monthly", priority: "0.7" },
+      { loc: `${SITE_URL_SITEMAP}/contact`,            changefreq: "monthly", priority: "0.7" },
+      { loc: `${SITE_URL_SITEMAP}/terms-and-conditions`, changefreq: "yearly", priority: "0.3" },
+      { loc: `${SITE_URL_SITEMAP}/privacy-policy`,    changefreq: "yearly",  priority: "0.3" },
+      { loc: `${SITE_URL_SITEMAP}/gdpr-policy`,       changefreq: "yearly",  priority: "0.3" },
+    ];
+
+    // ── Fetch all active dynamic content from MongoDB ────────
+    const [blogs, services, fleets, events] = await Promise.all([
+      Blog.find({ isActive: true }, "slug updatedAt").lean(),
+      Service.find({ isActive: true }, "slug updatedAt").lean(),
+      Fleet.find({ isActive: true }, "slug updatedAt").lean(),
+      Event.find({ isActive: true }, "slug updatedAt").lean(),
+    ]);
+
+    const formatDate = (d) =>
+      d ? new Date(d).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+
+    // ── Build <url> entries ──────────────────────────────────
+    const urlEntries = [];
+
+    for (const p of staticUrls) {
+      urlEntries.push(`
+    <url>
+        <loc>${p.loc}</loc>
+        <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
+        <changefreq>${p.changefreq}</changefreq>
+        <priority>${p.priority}</priority>
+    </url>`);
+    }
+
+    for (const s of services) {
+      if (!s.slug) continue;
+      urlEntries.push(`
+    <url>
+        <loc>${SITE_URL_SITEMAP}/services/${s.slug}</loc>
+        <lastmod>${formatDate(s.updatedAt)}</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>`);
+    }
+
+    for (const f of fleets) {
+      if (!f.slug) continue;
+      urlEntries.push(`
+    <url>
+        <loc>${SITE_URL_SITEMAP}/fleet/${f.slug}</loc>
+        <lastmod>${formatDate(f.updatedAt)}</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>`);
+    }
+
+    for (const e of events) {
+      if (!e.slug) continue;
+      urlEntries.push(`
+    <url>
+        <loc>${SITE_URL_SITEMAP}/events/${e.slug}</loc>
+        <lastmod>${formatDate(e.updatedAt)}</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>`);
+    }
+
+    for (const b of blogs) {
+      if (!b.slug) continue;
+      urlEntries.push(`
+    <url>
+        <loc>${SITE_URL_SITEMAP}/blog/${b.slug}</loc>
+        <lastmod>${formatDate(b.updatedAt)}</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>`);
+    }
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+    xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+        http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">${urlEntries.join("")}
+</urlset>`;
+
+    // Store in shared cache
+    sitemapState.cache = xml;
+    sitemapState.cacheTime = now;
+
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    return res.send(xml);
+
+  } catch (err) {
+    console.error("Sitemap generation error:", err.message);
+    return res.status(500).send("Error generating sitemap");
+  }
+});
 
 // ================================================================
 // GEO: llms.txt — AI-readable business summary for LLMs
