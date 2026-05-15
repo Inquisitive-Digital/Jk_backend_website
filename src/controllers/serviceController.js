@@ -1,6 +1,7 @@
 import { Service } from "../models/service.model.js";
 import { Airport } from "../models/airport.model.js";
 import { deleteFile } from "../middlewares/multer.js";
+import { sitemapState } from "../utils/sitemapCache.js";
 
 // @desc    Create a new service
 // @route   POST /api/services
@@ -63,7 +64,7 @@ export const createService = async (req, res) => {
             title,
             subtitle,
             category,
-            slug: slug || undefined, // let pre-validate auto-generate if not provided
+            slug: slug || undefined,
             description,
             longDescription: longDescription || "",
             image,
@@ -76,6 +77,9 @@ export const createService = async (req, res) => {
             meta_title: meta_title || "",
             meta_description: meta_description || "",
         });
+
+        // Bust sitemap cache — new service appears immediately
+        sitemapState.bust();
 
         res.status(201).json({
             success: true,
@@ -342,6 +346,9 @@ export const updateService = async (req, res) => {
 
         await service.save();
 
+        // Bust sitemap cache — changes reflect immediately
+        sitemapState.bust();
+
         res.status(200).json({
             success: true,
             message: "Service updated successfully",
@@ -386,6 +393,9 @@ export const deleteService = async (req, res) => {
         }
 
         await Service.findByIdAndDelete(req.params.id);
+
+        // Bust sitemap cache — deleted service removed immediately
+        sitemapState.bust();
 
         res.status(200).json({
             success: true,
