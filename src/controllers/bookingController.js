@@ -195,13 +195,15 @@ export const updateBookingStatus = async (req, res) => {
 };
 
 /**
- * Update booking details (when user edits from summary)
- * Sends welcome email only if email address changed
+ * Update booking details (when user goes back and re-submits from step 3)
+ * Always updates the full booking payload — including location, vehicle, pricing, date/time.
+ * Sends welcome email only if the passenger email address changed.
  */
 export const updateBookingDetails = async (req, res) => {
     try {
         const { id } = req.params;
         const {
+            // Passenger / flight / instructions
             passengerDetails,
             flightDetails,
             specialInstructions,
@@ -209,6 +211,16 @@ export const updateBookingDetails = async (req, res) => {
             guestDetails,
             isAirportPickup,
             originalEmail, // The original email to compare against
+            // Journey fields (updated when user goes back and changes location / car / date)
+            pickup,
+            dropoff,
+            pickupDate,
+            pickupTime,
+            serviceType,
+            journeyInfo,
+            vehicleId,
+            vehicleDetails,
+            pricing,
         } = req.body;
 
         // Get the existing booking to check email change
@@ -224,14 +236,25 @@ export const updateBookingDetails = async (req, res) => {
         const newEmail = passengerDetails?.email;
         const emailChanged = originalEmail && newEmail && originalEmail !== newEmail;
 
-        // Build update data
+        // Build update data — always include journey fields so DB stays in sync
         const updateData = {
+            // Passenger details
             passengerDetails,
             isBookingForSomeoneElse,
             guestDetails: isBookingForSomeoneElse ? guestDetails : null,
             isAirportPickup,
             flightDetails: isAirportPickup ? flightDetails : null,
             specialInstructions,
+            // Journey fields — only overwrite if provided in the request
+            ...(pickup !== undefined && { pickup }),
+            ...(dropoff !== undefined && { dropoff }),
+            ...(pickupDate !== undefined && { pickupDate }),
+            ...(pickupTime !== undefined && { pickupTime }),
+            ...(serviceType !== undefined && { serviceType }),
+            ...(journeyInfo !== undefined && { journeyInfo }),
+            ...(vehicleId !== undefined && { vehicleId }),
+            ...(vehicleDetails !== undefined && { vehicleDetails }),
+            ...(pricing !== undefined && { pricing }),
         };
 
         const booking = await Booking.findByIdAndUpdate(id, updateData, {
@@ -239,7 +262,7 @@ export const updateBookingDetails = async (req, res) => {
             runValidators: true,
         });
 
-        // Send welcome email only to the NEW email if email changed
+        // Send welcome email only to the NEW email if the email address changed
         if (emailChanged) {
             const emailBookingData = booking.toObject();
             sendWelcomeEmail(emailBookingData).catch((err) => {
@@ -247,6 +270,11 @@ export const updateBookingDetails = async (req, res) => {
             });
             console.log(`Email changed from ${originalEmail} to ${newEmail} - sending welcome email to new address`);
         }
+
+        // Always re-notify admin so the dashboard reflects the latest booking details
+        sendLeadNotificationToAdmin(booking.toObject()).catch((err) => {
+            console.error("Background email error (admin re-notification):", err);
+        });
 
         res.status(200).json({
             success: true,
