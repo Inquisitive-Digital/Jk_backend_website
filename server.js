@@ -43,6 +43,19 @@ const PORT = process.env.PORT || 5000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// ================================================================
+// CANONICAL REDIRECT — Force www + HTTPS
+// Must be the VERY FIRST middleware, before CORS / routes / Passenger
+// Catches requests that bypass Apache .htaccess (e.g. direct Node access)
+// ================================================================
+app.use((req, res, next) => {
+  const host = req.headers.host || "";
+  if (host && !host.startsWith("www.")) {
+    return res.redirect(301, "https://www.jkexecutivechauffeurs.com" + req.originalUrl);
+  }
+  next();
+});
+
 // Middleware setup
 const corsOptions = {
   origin: ["http://localhost:5173", "http://localhost:5005", "http://127.0.0.1:5173", "https://jk-frontend-nine.vercel.app", "https://jkexecutivechauffeurs.com", "https://www.jkexecutivechauffeurs.com", "http://jkexecutivechauffeurs.com/", "http://dev.jkexecutivechauffeurs.com/", "https://www.dev.jkexecutivechauffeurs.com"],
@@ -291,51 +304,98 @@ app.get("/", async (req, res, next) => {
     const localBusinessJsonLd = `<script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "LocalBusiness",
+      "@type": ["TaxiService", "LocalBusiness"],
       "name": "JK Executive Chauffeurs",
-      "url": "${SITE_URL}",
-      "logo": "${SITE_URL}/JkLogo.png",
-      "image": "${SITE_URL}/JkLogo.png",
-      "description": "Premium chauffeur services in London for airport transfers, corporate travel, and special events. Professional, DBS-checked drivers available 24/7.",
-      "telephone": "+44-XXXX-XXXXXX",
+      "description": "Premium executive chauffeur service in London. Airport transfers, corporate travel, wedding cars & events. Mercedes S-Class, V-Class, Rolls-Royce fleet. Available 24/7.",
+      "url": "https://www.jkexecutivechauffeurs.com",
+      "logo": "https://www.jkexecutivechauffeurs.com/assets/JkLogo-DofcZZYI.png",
+      "image": "https://www.jkexecutivechauffeurs.com/assets/heroImage-B2GGPHyc.png",
+      "telephone": "+442034759906",
       "email": "info@jkexecutivechauffeurs.com",
+      "vatID": "280189982",
+      "legalName": "JK Executive Chauffeurs Ltd",
+      "identifier": [
+        {
+          "@type": "PropertyValue",
+          "name": "Companies House Registration",
+          "value": "10696876"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TfL Private Hire Operator Licence",
+          "value": "[ 010468 ]"
+        }
+      ],
       "address": {
         "@type": "PostalAddress",
-        "addressLocality": "London",
-        "addressRegion": "England",
+        "streetAddress": "1 Furzeground Way, Stockley Park",
+        "addressLocality": "Uxbridge",
+        "addressRegion": "Middlesex",
+        "postalCode": "UB11 1BD",
         "addressCountry": "GB"
       },
-      "areaServed": [
-        {"@type": "City", "name": "London"},
-        {"@type": "Airport", "name": "Heathrow Airport"},
-        {"@type": "Airport", "name": "Gatwick Airport"},
-        {"@type": "Airport", "name": "Stansted Airport"},
-        {"@type": "Airport", "name": "Luton Airport"},
-        {"@type": "Airport", "name": "London City Airport"}
-      ],
-      "priceRange": "££",
-      "currenciesAccepted": "GBP",
-      "paymentAccepted": "Credit Card, Debit Card, Cash, Bank Transfer",
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 51.5074,
+        "longitude": -0.4593
+      },
       "openingHoursSpecification": {
         "@type": "OpeningHoursSpecification",
-        "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+        "dayOfWeek": [
+          "Monday","Tuesday","Wednesday",
+          "Thursday","Friday","Saturday","Sunday"
+        ],
         "opens": "00:00",
         "closes": "23:59"
       },
+      "areaServed": [
+        { "@type": "City", "name": "London" },
+        { "@type": "Airport", "name": "Heathrow Airport", "iataCode": "LHR" },
+        { "@type": "Airport", "name": "Gatwick Airport", "iataCode": "LGW" },
+        { "@type": "Airport", "name": "Stansted Airport", "iataCode": "STN" },
+        { "@type": "Airport", "name": "London City Airport", "iataCode": "LCY" },
+        { "@type": "Airport", "name": "Luton Airport", "iataCode": "LTN" }
+      ],
       "hasOfferCatalog": {
         "@type": "OfferCatalog",
-        "name": "Chauffeur Services",
+        "name": "Executive Chauffeur Services",
         "itemListElement": [
-          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Airport Transfer"}},
-          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Corporate Chauffeur Service"}},
-          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Wedding Transportation"}},
-          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Event Transportation"}},
-          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Hourly Hire"}}
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Airport Transfer Service" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Corporate Chauffeur Service" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Wedding Chauffeur Service" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Hourly As-Directed Chauffeur" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Private Aviation Chauffeur" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Intercity Chauffeur Service" } }
         ]
       },
+      "paymentAccepted": "Cash, Credit Card, Debit Card, PayPal, RuPay",
+      "currenciesAccepted": "GBP",
+      "numberOfEmployees": {
+        "@type": "QuantitativeValue",
+        "value": 120
+      },
       "sameAs": [
-        "https://www.trustpilot.com/review/jkexecutivechauffeurs.com"
+        "https://www.facebook.com/profile.php?id=61581449520001",
+        "https://www.instagram.com/jkexecutivechauffeurs?igsh=NnFwN3B0d2Q0NHZk",
+        "https://www.linkedin.com/company/jk-executive-chauffeurs",
+        "https://share.google/09Kot2PXaujfkjnBQ"
       ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "JK Executive Chauffeurs",
+      "url": "https://www.jkexecutivechauffeurs.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://www.jkexecutivechauffeurs.com/?s={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
     }
     </script>`;
 
