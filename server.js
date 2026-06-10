@@ -37,6 +37,15 @@ import Event from "./src/models/event.model.js";
 import { Fleet } from "./src/models/fleet.model.js";
 import { sitemapState } from "./src/utils/sitemapCache.js";
 const app = express();
+
+// ================================================================
+// TRUST PROXY — Required when running behind Hostinger's reverse proxy
+// Allows express-rate-limit to read the real client IP from
+// X-Forwarded-For headers instead of the proxy IP
+// '1' = trust exactly one proxy hop (safe for Hostinger/Passenger)
+// ================================================================
+app.set('trust proxy', 1);
+
 const PORT = process.env.PORT || 5000;
 
 // Get __dirname equivalent in ES modules
@@ -47,10 +56,12 @@ const __dirname = path.dirname(__filename);
 // CANONICAL REDIRECT — Force www + HTTPS
 // Must be the VERY FIRST middleware, before CORS / routes / Passenger
 // Catches requests that bypass Apache .htaccess (e.g. direct Node access)
+// Scoped to production domain only — localhost is intentionally skipped
 // ================================================================
 app.use((req, res, next) => {
   const host = req.headers.host || "";
-  if (host && !host.startsWith("www.")) {
+  const isProduction = host.includes("jkexecutivechauffeurs.com");
+  if (isProduction && !host.startsWith("www.")) {
     return res.redirect(301, "https://www.jkexecutivechauffeurs.com" + req.originalUrl);
   }
   next();
@@ -114,16 +125,16 @@ app.get("/sitemap.xml", async (req, res) => {
 
     // ── Static pages ─────────────────────────────────────────
     const staticUrls = [
-      { loc: `${SITE_URL_SITEMAP}/`,                   changefreq: "weekly",  priority: "1.0" },
-      { loc: `${SITE_URL_SITEMAP}/services`,           changefreq: "weekly",  priority: "0.9" },
-      { loc: `${SITE_URL_SITEMAP}/fleet`,              changefreq: "weekly",  priority: "0.9" },
-      { loc: `${SITE_URL_SITEMAP}/blog`,               changefreq: "daily",   priority: "0.8" },
-      { loc: `${SITE_URL_SITEMAP}/booking`,            changefreq: "monthly", priority: "0.8" },
-      { loc: `${SITE_URL_SITEMAP}/about`,              changefreq: "monthly", priority: "0.7" },
-      { loc: `${SITE_URL_SITEMAP}/contact`,            changefreq: "monthly", priority: "0.7" },
+      { loc: `${SITE_URL_SITEMAP}/`, changefreq: "weekly", priority: "1.0" },
+      { loc: `${SITE_URL_SITEMAP}/services`, changefreq: "weekly", priority: "0.9" },
+      { loc: `${SITE_URL_SITEMAP}/fleet`, changefreq: "weekly", priority: "0.9" },
+      { loc: `${SITE_URL_SITEMAP}/blog`, changefreq: "daily", priority: "0.8" },
+      { loc: `${SITE_URL_SITEMAP}/booking`, changefreq: "monthly", priority: "0.8" },
+      { loc: `${SITE_URL_SITEMAP}/about`, changefreq: "monthly", priority: "0.7" },
+      { loc: `${SITE_URL_SITEMAP}/contact`, changefreq: "monthly", priority: "0.7" },
       { loc: `${SITE_URL_SITEMAP}/terms-and-conditions`, changefreq: "yearly", priority: "0.3" },
-      { loc: `${SITE_URL_SITEMAP}/privacy-policy`,    changefreq: "yearly",  priority: "0.3" },
-      { loc: `${SITE_URL_SITEMAP}/gdpr-policy`,       changefreq: "yearly",  priority: "0.3" },
+      { loc: `${SITE_URL_SITEMAP}/privacy-policy`, changefreq: "yearly", priority: "0.3" },
+      { loc: `${SITE_URL_SITEMAP}/gdpr-policy`, changefreq: "yearly", priority: "0.3" },
     ];
 
     // ── Fetch all active dynamic content from MongoDB ────────
@@ -469,7 +480,8 @@ app.get("/", async (req, res, next) => {
 // SSR: /blog/:slug — Blog detail page (most important for Google indexing)
 app.get("/blog/:slug", async (req, res, next) => {
   try {
-    const { slug } = req.params;
+    // Strip trailing slash so /blog/my-slug/ resolves identically to /blog/my-slug
+    const slug = req.params.slug.replace(/\/$/, "");
 
     // Skip API-like slugs
     if (slug.startsWith("api")) return next();
