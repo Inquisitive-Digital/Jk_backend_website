@@ -21,6 +21,7 @@ const formatDate = (dateStr) => {
     if (!dateStr) return "—";
     const date = new Date(dateStr);
     return date.toLocaleDateString("en-GB", {
+        timeZone: "Europe/London",
         weekday: "long",
         day: "numeric",
         month: "long",
@@ -566,7 +567,7 @@ export const sendLeadNotificationToAdmin = async (bookingData) => {
                 
                 <div class="highlight-box">
                     <p style="margin: 0; font-size: 14px;">
-                        <strong>⏰ Lead Captured:</strong> ${new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" })}
+                        <strong>⏰ Lead Captured:</strong> ${new Date().toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "full", timeStyle: "short" })}
                     </p>
                 </div>
             </div>
