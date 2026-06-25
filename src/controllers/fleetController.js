@@ -197,6 +197,66 @@ export const getFleetBySlug = async (req, res) => {
     }
 };
 
+// @desc    Get ALL fleet entries for admin (paginated, includes inactive)
+// @route   GET /api/fleet/admin/all
+export const getAllFleetAdmin = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        const searchTerm = req.query.search?.trim();
+        const filter = searchTerm
+            ? {
+                  $or: [
+                      { title: { $regex: searchTerm, $options: "i" } },
+                      { slug: { $regex: searchTerm, $options: "i" } },
+                  ],
+              }
+            : {};
+
+        const [fleetItems, total] = await Promise.all([
+            Fleet.find(filter)
+                .sort({ priority: 1, createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .select("-sections -__v"),
+            Fleet.countDocuments(filter),
+        ]);
+
+        res.status(200).json({
+            success: true,
+            count: fleetItems.length,
+            total,
+            totalPages: Math.ceil(total / limit),
+            currentPage: page,
+            fleet: fleetItems,
+        });
+    } catch (error) {
+        console.error("Error fetching fleet (admin):", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching fleet entries",
+            error: error.message,
+        });
+    }
+};
+
+// @desc    Get single fleet by ID (admin use - no isActive filter)
+// @route   GET /api/fleet/admin/:id
+export const getFleetById = async (req, res) => {
+    try {
+        const fleet = await Fleet.findById(req.params.id).select("-__v");
+        if (!fleet) {
+            return res.status(404).json({ success: false, message: "Fleet entry not found" });
+        }
+        res.status(200).json({ success: true, fleet });
+    } catch (error) {
+        console.error("Error fetching fleet by id:", error);
+        res.status(500).json({ success: false, message: "Error fetching fleet entry", error: error.message });
+    }
+};
+
 // @desc    Update a fleet entry
 // @route   PUT /api/fleet/:id
 export const updateFleet = async (req, res) => {
