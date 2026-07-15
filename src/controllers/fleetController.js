@@ -11,7 +11,7 @@ export const createFleet = async (req, res) => {
             specifications, features, vehicleId,
             passengers, luggage, seoTitle, seoDescription,
             isActive, priority, meta_title, meta_description,
-            sections, faqs,
+            sections, faqs, pricingOptions,
         } = req.body;
 
         // Build hero image
@@ -54,6 +54,13 @@ export const createFleet = async (req, res) => {
             return val;
         };
 
+        // FormData sends booleans as strings — cast explicitly
+        const parseBool = (val, fallback = true) => {
+            if (val === undefined || val === null) return fallback;
+            if (typeof val === "boolean") return val;
+            return String(val).toLowerCase() === "true";
+        };
+
         const fleet = await Fleet.create({
             title,
             subtitle: subtitle || "",
@@ -69,12 +76,13 @@ export const createFleet = async (req, res) => {
             luggage: parseInt(luggage) || 0,
             seoTitle: seoTitle || "",
             seoDescription: seoDescription || "",
-            isActive: isActive !== undefined ? isActive : true,
+            isActive: parseBool(isActive, true),
             priority: parseInt(priority) || 0,
             meta_title: meta_title || "",
             meta_description: meta_description || "",
             sections: parseArray(sections),
             faqs: parseArray(faqs),
+            pricingOptions: parseArray(pricingOptions),
         });
 
         res.status(201).json({ success: true, message: "Fleet entry created", fleet });
@@ -273,8 +281,15 @@ export const updateFleet = async (req, res) => {
             specifications, features, vehicleId,
             passengers, luggage, seoTitle, seoDescription,
             isActive, priority, meta_title, meta_description,
-            sections, faqs,
+            sections, faqs, pricingOptions,
         } = req.body;
+
+        // FormData sends booleans as strings — cast explicitly
+        const parseBool = (val, fallback = true) => {
+            if (val === undefined || val === null) return fallback;
+            if (typeof val === "boolean") return val;
+            return String(val).toLowerCase() === "true";
+        };
 
         if (title) fleet.title = title;
         if (subtitle !== undefined) fleet.subtitle = subtitle;
@@ -288,7 +303,7 @@ export const updateFleet = async (req, res) => {
         if (seoDescription !== undefined) fleet.seoDescription = seoDescription;
         if (meta_title !== undefined) fleet.meta_title = meta_title;
         if (meta_description !== undefined) fleet.meta_description = meta_description;
-        if (isActive !== undefined) fleet.isActive = isActive;
+        if (isActive !== undefined) fleet.isActive = parseBool(isActive, true);
         if (priority !== undefined) fleet.priority = parseInt(priority);
 
         // Parse arrays
@@ -304,6 +319,7 @@ export const updateFleet = async (req, res) => {
         if (features) fleet.features = parseArray(features);
         if (sections) fleet.sections = parseArray(sections);
         if (faqs) fleet.faqs = parseArray(faqs);
+        if (pricingOptions) fleet.pricingOptions = parseArray(pricingOptions);
 
         // Update hero image
         if (req.files?.heroImage?.[0]) {
