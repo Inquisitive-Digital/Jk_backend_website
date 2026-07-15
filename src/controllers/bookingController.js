@@ -6,6 +6,40 @@ import {
     sendNewBookingToAdmin,
 } from "../utils/emailService.js";
 
+// ================================================================
+// LONDON-TIME UTILITY — Hostinger-safe (works on ANY server TZ)
+// Both sides go through the same Europe/London pipeline so
+// the server's own OS timezone cancels out completely.
+// Handles GMT (winter) and BST (summer) automatically.
+// ================================================================
+const getLondonNowMs = () => {
+    const londonWallClock = new Date().toLocaleString("en-US", {
+        timeZone: "Europe/London",
+    });
+    return new Date(londonWallClock).getTime();
+};
+
+// pickupDate = "YYYY-MM-DD"  (string, e.g. "2026-06-18")
+// pickupTime = "HH:MM" OR "HH:MM AM/PM"  (e.g. "14:30" or "02:30 PM")
+const to24h = (timeStr) => {
+    if (!timeStr) return "00:00";
+    if (!timeStr.includes(" ")) return timeStr; // already 24h ("14:30")
+    const [time, period] = timeStr.split(" ");
+    let [h, m] = time.split(":").map(Number);
+    if (period === "PM" && h !== 12) h += 12;
+    if (period === "AM" && h === 12) h = 0;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+const getProposedLondonMs = (pickupDate, pickupTime) => {
+    // The pickupDate and pickupTime are ALREADY in London time.
+    // By parsing it directly as a naive date string, it gets the same local server offset
+    // as the londonNowMs (which parses the London wall clock string).
+    // This perfectly cancels out the server's OS timezone.
+    const time24 = to24h(pickupTime);
+    return new Date(`${pickupDate}T${time24}:00`).getTime();
+};
+
 /**
  * Create a new booking (called when user clicks Proceed on Step 3)
  * This saves the booking as a lead and sends welcome/notification emails
@@ -43,6 +77,24 @@ export const createBooking = async (req, res) => {
             // Flag to skip emails (for updates)
             skipEmails,
         } = req.body;
+
+        // ================================================================
+        // LONDON-TIME PAST-BOOKING GUARD
+        // Rejects any booking whose pickup time has already passed in London.
+        // Safe on Hostinger regardless of server OS timezone.
+        // ================================================================
+        if (pickupDate && pickupTime) {
+            const londonNowMs  = getLondonNowMs();
+            const proposedMs   = getProposedLondonMs(pickupDate, pickupTime);
+
+            if (proposedMs < londonNowMs) {
+                return res.status(400).json({
+                    success: false,
+                    error:   "Invalid Booking Window",
+                    message: "The requested pickup time has already passed in London. Please select a future time.",
+                });
+            }
+        }
 
         // Create booking with all details
         const booking = await Booking.create({
