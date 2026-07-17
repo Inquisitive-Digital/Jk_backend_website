@@ -1,5 +1,6 @@
 import { sendContactInquiryToAdmin, sendBulkQuoteRequestToAdmin, sendCarQuoteEmails } from "../utils/emailService.js";
 import { Booking } from "../models/booking.model.js";
+import { ContactLead } from "../models/contact.model.js";
 
 
 /**
@@ -35,6 +36,21 @@ export const submitContactInquiry = async (req, res) => {
             subject: subject?.trim() || "",
             message: message.trim(),
         });
+
+        // Save lead to database
+        try {
+            const newLead = new ContactLead({
+                name: name.trim(),
+                email: email.trim(),
+                phone: phone?.trim() || "",
+                subject: subject?.trim() || "",
+                message: message.trim(),
+                type: "contact"
+            });
+            await newLead.save();
+        } catch (dbError) {
+            console.error("Error saving contact lead to database:", dbError);
+        }
 
         if (!result.success) {
             console.error("Email sending failed:", result.error);
@@ -89,6 +105,19 @@ export const submitBulkQuoteRequest = async (req, res) => {
             email: email.trim(),
             enquiry: enquiry.trim(),
         });
+
+        // Save lead to database
+        try {
+            const newLead = new ContactLead({
+                name: name.trim(),
+                email: email.trim(),
+                message: enquiry.trim(),
+                type: "bulk_quote"
+            });
+            await newLead.save();
+        } catch (dbError) {
+            console.error("Error saving bulk quote lead to database:", dbError);
+        }
 
         if (!result.success) {
             console.error("Bulk quote email sending failed:", result.error);
