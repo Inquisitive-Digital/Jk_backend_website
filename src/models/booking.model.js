@@ -19,7 +19,9 @@ const bookingSchema = new mongoose.Schema(
             lat: { type: Number },
             lng: { type: Number },
         },
-        pickupDate: { type: Date, required: true },
+        // Stored as "YYYY-MM-DD" string — immune to MongoDB UTC conversion.
+        // London wall-clock date is preserved exactly as the user selected it.
+        pickupDate: { type: String, required: true },
         pickupTime: { type: String, required: true },
         serviceType: {
             type: String,

@@ -98,6 +98,14 @@ const fleetSchema = new mongoose.Schema(
             },
         ],
 
+        // ----- Pricing Options -----
+        pricingOptions: [
+            {
+                label: { type: String, trim: true }, // e.g. "Hourly rate (minimum 3 hours)"
+                price: { type: String, trim: true }, // e.g. "£75"
+            },
+        ],
+
         // FAQs — per-fleet FAQ items (optional)
         faqs: [
             {

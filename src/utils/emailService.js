@@ -17,15 +17,42 @@ const createTransporter = () => {
 };
 
 // Format date for display in emails
+// We handle both simple date strings ("YYYY-MM-DD") and full ISO strings safely 
+// to prevent timezone offsets from shifting the date.
 const formatDate = (dateStr) => {
     if (!dateStr) return "—";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-GB", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-    });
+    
+    try {
+        // If it's a simple YYYY-MM-DD string, parse it as noon UTC to avoid any timezone shifts
+        if (typeof dateStr === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) {
+            const [y, m, d] = dateStr.trim().split("-").map(Number);
+            const date = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+            return date.toLocaleDateString("en-GB", {
+                timeZone: "UTC",
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+            });
+        }
+        
+        // For full ISO strings (e.g., from frontend date picker) or other formats
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) {
+            return String(dateStr); // Fallback if invalid date
+        }
+        
+        return date.toLocaleDateString("en-GB", {
+            timeZone: "Europe/London",
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+        });
+    } catch (error) {
+        console.error("Date formatting error:", error);
+        return String(dateStr);
+    }
 };
 
 // Format currency
@@ -566,7 +593,7 @@ export const sendLeadNotificationToAdmin = async (bookingData) => {
                 
                 <div class="highlight-box">
                     <p style="margin: 0; font-size: 14px;">
-                        <strong>⏰ Lead Captured:</strong> ${new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" })}
+                        <strong>⏰ Lead Captured:</strong> ${new Date().toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "full", timeStyle: "short" })}
                     </p>
                 </div>
             </div>
