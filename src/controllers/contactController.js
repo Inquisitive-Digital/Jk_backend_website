@@ -221,3 +221,61 @@ export const submitCarQuoteRequest = async (req, res) => {
         });
     }
 };
+/**
+ * Get all contact leads (Admin)
+ */
+export const getContactLeads = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        let query = {};
+        if (req.query.search) {
+            query = {
+                $or: [
+                    { name: { $regex: req.query.search, $options: "i" } },
+                    { email: { $regex: req.query.search, $options: "i" } },
+                    { phone: { $regex: req.query.search, $options: "i" } },
+                ]
+            };
+        }
+
+        const leads = await ContactLead.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const total = await ContactLead.countDocuments(query);
+
+        res.status(200).json({
+            success: true,
+            data: leads,
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        console.error("Error in getContactLeads:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
+
+/**
+ * Delete a contact lead (Admin)
+ */
+export const deleteContactLead = async (req, res) => {
+    try {
+        const lead = await ContactLead.findById(req.params.id);
+        if (!lead) {
+            return res.status(404).json({ success: false, message: "Lead not found" });
+        }
+        await lead.deleteOne();
+        res.status(200).json({ success: true, message: "Lead deleted successfully" });
+    } catch (error) {
+        console.error("Error in deleteContactLead:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
