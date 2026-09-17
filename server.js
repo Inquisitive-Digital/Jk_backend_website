@@ -94,11 +94,11 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads"), {
 // Returns 200 if everything is OK, 503 if DB is down
 // ================================================================
 app.get("/health", async (req, res) => {
-  const dbState     = mongoose.connection.readyState;
+  const dbState = mongoose.connection.readyState;
   //  0 = disconnected | 1 = connected | 2 = connecting | 3 = disconnecting
-  const dbStateMap  = { 0: "disconnected", 1: "connected", 2: "connecting", 3: "disconnecting" };
-  const dbStatus    = dbStateMap[dbState] || "unknown";
-  const dbHealthy   = dbState === 1;
+  const dbStateMap = { 0: "disconnected", 1: "connected", 2: "connecting", 3: "disconnecting" };
+  const dbStatus = dbStateMap[dbState] || "unknown";
+  const dbHealthy = dbState === 1;
 
   // Ping the DB with a lightweight command to confirm it's truly alive
   let dbPingMs = null;
@@ -117,16 +117,16 @@ app.get("/health", async (req, res) => {
   const memMB = (process.memoryUsage().rss / 1024 / 1024).toFixed(1);
 
   const payload = {
-    status:      dbPingOk ? "ok" : "degraded",
-    timestamp:   new Date().toISOString(),
-    uptime_sec:  Math.floor(process.uptime()),
+    status: dbPingOk ? "ok" : "degraded",
+    timestamp: new Date().toISOString(),
+    uptime_sec: Math.floor(process.uptime()),
     environment: process.env.NODE_ENV || "development",
     database: {
-      status:    dbStatus,
-      ping_ok:   dbPingOk,
-      ping_ms:   dbPingMs,
-      host:      mongoose.connection.host || null,
-      db_name:   mongoose.connection.name || null,
+      status: dbStatus,
+      ping_ok: dbPingOk,
+      ping_ms: dbPingMs,
+      host: mongoose.connection.host || null,
+      db_name: mongoose.connection.name || null,
     },
     memory: {
       rss_mb: parseFloat(memMB),
@@ -435,6 +435,7 @@ app.get("/", async (req, res, next) => {
         "@type": "QuantitativeValue",
         "value": 120
       },
+      "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "reviewCount": "45", "bestRating": "5", "worstRating": "1" },
       "sameAs": [
         "https://www.facebook.com/profile.php?id=61581449520001",
         "https://www.instagram.com/jkexecutivechauffeurs?igsh=NnFwN3B0d2Q0NHZk",
