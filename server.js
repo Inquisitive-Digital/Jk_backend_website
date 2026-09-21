@@ -174,6 +174,9 @@ app.get("/sitemap.xml", async (req, res) => {
     }
 
     // ── Static pages ─────────────────────────────────────────
+    // ⚠️  MAINTAINER NOTE: Only add URLs that correspond to explicit public
+    //    routes in App.jsx. Never add /admin/*, /login-admin, /event-calender2,
+    //    or any wildcard / 404 route — those will break Google Search Console.
     const staticUrls = [
       { loc: `${SITE_URL_SITEMAP}/`, changefreq: "weekly", priority: "1.0" },
       { loc: `${SITE_URL_SITEMAP}/services`, changefreq: "weekly", priority: "0.9" },
@@ -188,12 +191,19 @@ app.get("/sitemap.xml", async (req, res) => {
     ];
 
     // ── Fetch all active dynamic content from MongoDB ────────
+    // title / name are fetched so we can skip incomplete documents that
+    // would render a 404 even though isActive is true.
     const [blogs, services, fleets, events] = await Promise.all([
-      Blog.find({ isActive: true }, "slug updatedAt").lean(),
-      Service.find({ isActive: true }, "slug updatedAt").lean(),
-      Fleet.find({ isActive: true }, "slug updatedAt").lean(),
-      Event.find({ isActive: true }, "slug updatedAt").lean(),
+      Blog.find({ isActive: true }, "slug title updatedAt").lean(),
+      Service.find({ isActive: true }, "slug name updatedAt").lean(),
+      Fleet.find({ isActive: true }, "slug name updatedAt").lean(),
+      Event.find({ isActive: true }, "slug title updatedAt").lean(),
     ]);
+
+    // A slug is only safe to emit if it's a non-empty, trimmed string with
+    // no whitespace (whitespace-only or null slugs would produce 404 URLs).
+    const isValidSlug = (slug) =>
+      typeof slug === "string" && slug.trim().length > 0 && !/\s/.test(slug.trim());
 
     const formatDate = (d) =>
       d ? new Date(d).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
@@ -212,7 +222,8 @@ app.get("/sitemap.xml", async (req, res) => {
     }
 
     for (const s of services) {
-      if (!s.slug) continue;
+      // Skip if slug is missing/malformed or the document has no name (page would 404)
+      if (!isValidSlug(s.slug) || !s.name) continue;
       urlEntries.push(`
     <url>
         <loc>${SITE_URL_SITEMAP}/services/${s.slug}</loc>
@@ -223,7 +234,8 @@ app.get("/sitemap.xml", async (req, res) => {
     }
 
     for (const f of fleets) {
-      if (!f.slug) continue;
+      // Skip if slug is missing/malformed or the document has no name (page would 404)
+      if (!isValidSlug(f.slug) || !f.name) continue;
       urlEntries.push(`
     <url>
         <loc>${SITE_URL_SITEMAP}/fleet/${f.slug}</loc>
@@ -234,7 +246,8 @@ app.get("/sitemap.xml", async (req, res) => {
     }
 
     for (const e of events) {
-      if (!e.slug) continue;
+      // Skip if slug is missing/malformed or the document has no title (page would 404)
+      if (!isValidSlug(e.slug) || !e.title) continue;
       urlEntries.push(`
     <url>
         <loc>${SITE_URL_SITEMAP}/events/${e.slug}</loc>
@@ -245,7 +258,8 @@ app.get("/sitemap.xml", async (req, res) => {
     }
 
     for (const b of blogs) {
-      if (!b.slug) continue;
+      // Skip if slug is missing/malformed or the document has no title (page would 404)
+      if (!isValidSlug(b.slug) || !b.title) continue;
       urlEntries.push(`
     <url>
         <loc>${SITE_URL_SITEMAP}/blog/${b.slug}</loc>
