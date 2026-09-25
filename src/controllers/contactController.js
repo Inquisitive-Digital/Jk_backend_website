@@ -1,5 +1,6 @@
 import { sendContactInquiryToAdmin, sendBulkQuoteRequestToAdmin, sendCarQuoteEmails } from "../utils/emailService.js";
 import { Booking } from "../models/booking.model.js";
+import { ContactLead } from "../models/contact.model.js";
 
 
 /**
@@ -35,6 +36,21 @@ export const submitContactInquiry = async (req, res) => {
             subject: subject?.trim() || "",
             message: message.trim(),
         });
+
+        // Save lead to database
+        try {
+            const newLead = new ContactLead({
+                name: name.trim(),
+                email: email.trim(),
+                phone: phone?.trim() || "",
+                subject: subject?.trim() || "",
+                message: message.trim(),
+                type: "contact"
+            });
+            await newLead.save();
+        } catch (dbError) {
+            console.error("Error saving contact lead to database:", dbError);
+        }
 
         if (!result.success) {
             console.error("Email sending failed:", result.error);
@@ -89,6 +105,19 @@ export const submitBulkQuoteRequest = async (req, res) => {
             email: email.trim(),
             enquiry: enquiry.trim(),
         });
+
+        // Save lead to database
+        try {
+            const newLead = new ContactLead({
+                name: name.trim(),
+                email: email.trim(),
+                message: enquiry.trim(),
+                type: "bulk_quote"
+            });
+            await newLead.save();
+        } catch (dbError) {
+            console.error("Error saving bulk quote lead to database:", dbError);
+        }
 
         if (!result.success) {
             console.error("Bulk quote email sending failed:", result.error);
@@ -190,5 +219,63 @@ export const submitCarQuoteRequest = async (req, res) => {
             message: "Something went wrong.",
             error: error.message,
         });
+    }
+};
+/**
+ * Get all contact leads (Admin)
+ */
+export const getContactLeads = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        let query = {};
+        if (req.query.search) {
+            query = {
+                $or: [
+                    { name: { $regex: req.query.search, $options: "i" } },
+                    { email: { $regex: req.query.search, $options: "i" } },
+                    { phone: { $regex: req.query.search, $options: "i" } },
+                ]
+            };
+        }
+
+        const leads = await ContactLead.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const total = await ContactLead.countDocuments(query);
+
+        res.status(200).json({
+            success: true,
+            data: leads,
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        console.error("Error in getContactLeads:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
+
+/**
+ * Delete a contact lead (Admin)
+ */
+export const deleteContactLead = async (req, res) => {
+    try {
+        const lead = await ContactLead.findById(req.params.id);
+        if (!lead) {
+            return res.status(404).json({ success: false, message: "Lead not found" });
+        }
+        await lead.deleteOne();
+        res.status(200).json({ success: true, message: "Lead deleted successfully" });
+    } catch (error) {
+        console.error("Error in deleteContactLead:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
     }
 };

@@ -3,6 +3,8 @@ import {
     createFleet,
     getAllFleet,
     getFleetBySlug,
+    getAllFleetAdmin,
+    getFleetById,
     updateFleet,
     deleteFleet,
 } from "../controllers/fleetController.js";
@@ -16,13 +18,26 @@ const router = express.Router();
 // Get all fleet entries (paginated)
 router.get("/", getAllFleet);
 
-// Get single fleet entry by slug
-router.get("/:slug", getFleetBySlug);
-
 // ─── ADMIN ROUTES (require valid admin JWT) ───────────────────────────────────
+// ⚠️ These MUST be defined BEFORE /:slug — otherwise Express matches
+//    "admin" as a slug value and these routes are never reached.
+
+// Get all fleet entries for admin
+router.get("/admin/all", protectAdmin, getAllFleetAdmin);
+
+// Get fleet entry by ID for admin
+router.get("/admin/:id", protectAdmin, getFleetById);
 
 // Create new fleet entry
-router.post("/", protectAdmin, createFleet);
+router.post(
+    "/",
+    protectAdmin,
+    upload.fields([
+        { name: "heroImage", maxCount: 1 },
+        { name: "gallery", maxCount: 10 },
+    ]),
+    createFleet
+);
 
 // Update fleet entry (supports file upload)
 router.put(
@@ -38,4 +53,9 @@ router.put(
 // Delete fleet entry
 router.delete("/:id", protectAdmin, deleteFleet);
 
+// ─── PUBLIC WILDCARD — must be LAST ──────────────────────────────────────────
+// Get single fleet entry by slug
+router.get("/:slug", getFleetBySlug);
+
 export default router;
+

@@ -11,6 +11,7 @@ import cors from "cors";
 import { errorMiddleware } from "./src/middlewares/error.js";
 import { apiRateLimiter } from "./src/middlewares/rateLimiter.js";
 import connectDB from "./src/db/database.js";
+import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import path from "path";
 import fs from "fs";
@@ -37,11 +38,35 @@ import Event from "./src/models/event.model.js";
 import { Fleet } from "./src/models/fleet.model.js";
 import { sitemapState } from "./src/utils/sitemapCache.js";
 const app = express();
+
+// ================================================================
+// TRUST PROXY — Required when running behind Hostinger's reverse proxy
+// Allows express-rate-limit to read the real client IP from
+// X-Forwarded-For headers instead of the proxy IP
+// '1' = trust exactly one proxy hop (safe for Hostinger/Passenger)
+// ================================================================
+app.set('trust proxy', 1);
+
 const PORT = process.env.PORT || 5000;
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// ================================================================
+// CANONICAL REDIRECT — Force www + HTTPS
+// Must be the VERY FIRST middleware, before CORS / routes / Passenger
+// Catches requests that bypass Apache .htaccess (e.g. direct Node access)
+// Scoped to production domain only — localhost is intentionally skipped
+// ================================================================
+app.use((req, res, next) => {
+  const host = req.headers.host || "";
+  const isProduction = host.includes("jkexecutivechauffeurs.com");
+  if (isProduction && !host.startsWith("www.")) {
+    return res.redirect(301, "https://www.jkexecutivechauffeurs.com" + req.originalUrl);
+  }
+  next();
+});
 
 // Middleware setup
 const corsOptions = {
@@ -62,6 +87,55 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads"), {
   maxAge: "1y" // Cache images for 1 year
 }));
 
+
+// ================================================================
+// HEALTH CHECK ENDPOINT
+// Used by UptimeRobot / monitoring tools to detect outages
+// Returns 200 if everything is OK, 503 if DB is down
+// ================================================================
+app.get("/health", async (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  //  0 = disconnected | 1 = connected | 2 = connecting | 3 = disconnecting
+  const dbStateMap = { 0: "disconnected", 1: "connected", 2: "connecting", 3: "disconnecting" };
+  const dbStatus = dbStateMap[dbState] || "unknown";
+  const dbHealthy = dbState === 1;
+
+  // Ping the DB with a lightweight command to confirm it's truly alive
+  let dbPingMs = null;
+  let dbPingOk = false;
+  if (dbHealthy) {
+    try {
+      const t0 = Date.now();
+      await mongoose.connection.db.admin().ping();
+      dbPingMs = Date.now() - t0;
+      dbPingOk = true;
+    } catch {
+      dbPingOk = false;
+    }
+  }
+
+  const memMB = (process.memoryUsage().rss / 1024 / 1024).toFixed(1);
+
+  const payload = {
+    status: dbPingOk ? "ok" : "degraded",
+    timestamp: new Date().toISOString(),
+    uptime_sec: Math.floor(process.uptime()),
+    environment: process.env.NODE_ENV || "development",
+    database: {
+      status: dbStatus,
+      ping_ok: dbPingOk,
+      ping_ms: dbPingMs,
+      host: mongoose.connection.host || null,
+      db_name: mongoose.connection.name || null,
+    },
+    memory: {
+      rss_mb: parseFloat(memMB),
+    },
+  };
+
+  const httpStatus = dbPingOk ? 200 : 503;
+  return res.status(httpStatus).json(payload);
+});
 
 // Routes setup
 app.use("/api/vehicles", vehicleRoutes);
@@ -100,26 +174,36 @@ app.get("/sitemap.xml", async (req, res) => {
     }
 
     // ── Static pages ─────────────────────────────────────────
+    // ⚠️  MAINTAINER NOTE: Only add URLs that correspond to explicit public
+    //    routes in App.jsx. Never add /admin/*, /login-admin, /event-calender2,
+    //    or any wildcard / 404 route — those will break Google Search Console.
     const staticUrls = [
-      { loc: `${SITE_URL_SITEMAP}/`,                   changefreq: "weekly",  priority: "1.0" },
-      { loc: `${SITE_URL_SITEMAP}/services`,           changefreq: "weekly",  priority: "0.9" },
-      { loc: `${SITE_URL_SITEMAP}/fleet`,              changefreq: "weekly",  priority: "0.9" },
-      { loc: `${SITE_URL_SITEMAP}/blog`,               changefreq: "daily",   priority: "0.8" },
-      { loc: `${SITE_URL_SITEMAP}/booking`,            changefreq: "monthly", priority: "0.8" },
-      { loc: `${SITE_URL_SITEMAP}/about`,              changefreq: "monthly", priority: "0.7" },
-      { loc: `${SITE_URL_SITEMAP}/contact`,            changefreq: "monthly", priority: "0.7" },
+      { loc: `${SITE_URL_SITEMAP}/`, changefreq: "weekly", priority: "1.0" },
+      { loc: `${SITE_URL_SITEMAP}/services`, changefreq: "weekly", priority: "0.9" },
+      { loc: `${SITE_URL_SITEMAP}/fleet`, changefreq: "weekly", priority: "0.9" },
+      { loc: `${SITE_URL_SITEMAP}/blog`, changefreq: "daily", priority: "0.8" },
+      { loc: `${SITE_URL_SITEMAP}/booking`, changefreq: "monthly", priority: "0.8" },
+      { loc: `${SITE_URL_SITEMAP}/about`, changefreq: "monthly", priority: "0.7" },
+      { loc: `${SITE_URL_SITEMAP}/contact`, changefreq: "monthly", priority: "0.7" },
       { loc: `${SITE_URL_SITEMAP}/terms-and-conditions`, changefreq: "yearly", priority: "0.3" },
-      { loc: `${SITE_URL_SITEMAP}/privacy-policy`,    changefreq: "yearly",  priority: "0.3" },
-      { loc: `${SITE_URL_SITEMAP}/gdpr-policy`,       changefreq: "yearly",  priority: "0.3" },
+      { loc: `${SITE_URL_SITEMAP}/privacy-policy`, changefreq: "yearly", priority: "0.3" },
+      { loc: `${SITE_URL_SITEMAP}/gdpr-policy`, changefreq: "yearly", priority: "0.3" },
     ];
 
     // ── Fetch all active dynamic content from MongoDB ────────
+    // title / name are fetched so we can skip incomplete documents that
+    // would render a 404 even though isActive is true.
     const [blogs, services, fleets, events] = await Promise.all([
-      Blog.find({ isActive: true }, "slug updatedAt").lean(),
-      Service.find({ isActive: true }, "slug updatedAt").lean(),
-      Fleet.find({ isActive: true }, "slug updatedAt").lean(),
-      Event.find({ isActive: true }, "slug updatedAt").lean(),
+      Blog.find({ isActive: true }, "slug title updatedAt").lean(),
+      Service.find({ isActive: true }, "slug name updatedAt").lean(),
+      Fleet.find({ isActive: true }, "slug name updatedAt").lean(),
+      Event.find({ isActive: true }, "slug title updatedAt").lean(),
     ]);
+
+    // A slug is only safe to emit if it's a non-empty, trimmed string with
+    // no whitespace (whitespace-only or null slugs would produce 404 URLs).
+    const isValidSlug = (slug) =>
+      typeof slug === "string" && slug.trim().length > 0 && !/\s/.test(slug.trim());
 
     const formatDate = (d) =>
       d ? new Date(d).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
@@ -138,7 +222,8 @@ app.get("/sitemap.xml", async (req, res) => {
     }
 
     for (const s of services) {
-      if (!s.slug) continue;
+      // Skip if slug is missing/malformed or the document has no name (page would 404)
+      if (!isValidSlug(s.slug) || !s.name) continue;
       urlEntries.push(`
     <url>
         <loc>${SITE_URL_SITEMAP}/services/${s.slug}</loc>
@@ -149,7 +234,8 @@ app.get("/sitemap.xml", async (req, res) => {
     }
 
     for (const f of fleets) {
-      if (!f.slug) continue;
+      // Skip if slug is missing/malformed or the document has no name (page would 404)
+      if (!isValidSlug(f.slug) || !f.name) continue;
       urlEntries.push(`
     <url>
         <loc>${SITE_URL_SITEMAP}/fleet/${f.slug}</loc>
@@ -160,7 +246,8 @@ app.get("/sitemap.xml", async (req, res) => {
     }
 
     for (const e of events) {
-      if (!e.slug) continue;
+      // Skip if slug is missing/malformed or the document has no title (page would 404)
+      if (!isValidSlug(e.slug) || !e.title) continue;
       urlEntries.push(`
     <url>
         <loc>${SITE_URL_SITEMAP}/events/${e.slug}</loc>
@@ -171,7 +258,8 @@ app.get("/sitemap.xml", async (req, res) => {
     }
 
     for (const b of blogs) {
-      if (!b.slug) continue;
+      // Skip if slug is missing/malformed or the document has no title (page would 404)
+      if (!isValidSlug(b.slug) || !b.title) continue;
       urlEntries.push(`
     <url>
         <loc>${SITE_URL_SITEMAP}/blog/${b.slug}</loc>
@@ -291,51 +379,99 @@ app.get("/", async (req, res, next) => {
     const localBusinessJsonLd = `<script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "LocalBusiness",
+      "@type": ["TaxiService", "LocalBusiness"],
       "name": "JK Executive Chauffeurs",
-      "url": "${SITE_URL}",
-      "logo": "${SITE_URL}/JkLogo.png",
-      "image": "${SITE_URL}/JkLogo.png",
-      "description": "Premium chauffeur services in London for airport transfers, corporate travel, and special events. Professional, DBS-checked drivers available 24/7.",
-      "telephone": "+44-XXXX-XXXXXX",
+      "description": "Premium executive chauffeur service in London. Airport transfers, corporate travel, wedding cars & events. Mercedes S-Class, V-Class, Rolls-Royce fleet. Available 24/7.",
+      "url": "https://www.jkexecutivechauffeurs.com",
+      "logo": "https://www.jkexecutivechauffeurs.com/assets/JkLogo-DofcZZYI.png",
+      "image": "https://www.jkexecutivechauffeurs.com/assets/heroImage-B2GGPHyc.png",
+      "telephone": "+442034759906",
       "email": "info@jkexecutivechauffeurs.com",
+      "vatID": "280189982",
+      "legalName": "JK Executive Chauffeurs Ltd",
+      "identifier": [
+        {
+          "@type": "PropertyValue",
+          "name": "Companies House Registration",
+          "value": "10696876"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "TfL Private Hire Operator Licence",
+          "value": "[ 010468 ]"
+        }
+      ],
       "address": {
         "@type": "PostalAddress",
-        "addressLocality": "London",
-        "addressRegion": "England",
+        "streetAddress": "1 Furzeground Way, Stockley Park",
+        "addressLocality": "Uxbridge",
+        "addressRegion": "Middlesex",
+        "postalCode": "UB11 1BD",
         "addressCountry": "GB"
       },
-      "areaServed": [
-        {"@type": "City", "name": "London"},
-        {"@type": "Airport", "name": "Heathrow Airport"},
-        {"@type": "Airport", "name": "Gatwick Airport"},
-        {"@type": "Airport", "name": "Stansted Airport"},
-        {"@type": "Airport", "name": "Luton Airport"},
-        {"@type": "Airport", "name": "London City Airport"}
-      ],
-      "priceRange": "££",
-      "currenciesAccepted": "GBP",
-      "paymentAccepted": "Credit Card, Debit Card, Cash, Bank Transfer",
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 51.5074,
+        "longitude": -0.4593
+      },
       "openingHoursSpecification": {
         "@type": "OpeningHoursSpecification",
-        "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+        "dayOfWeek": [
+          "Monday","Tuesday","Wednesday",
+          "Thursday","Friday","Saturday","Sunday"
+        ],
         "opens": "00:00",
         "closes": "23:59"
       },
+      "areaServed": [
+        { "@type": "City", "name": "London" },
+        { "@type": "Airport", "name": "Heathrow Airport", "iataCode": "LHR" },
+        { "@type": "Airport", "name": "Gatwick Airport", "iataCode": "LGW" },
+        { "@type": "Airport", "name": "Stansted Airport", "iataCode": "STN" },
+        { "@type": "Airport", "name": "London City Airport", "iataCode": "LCY" },
+        { "@type": "Airport", "name": "Luton Airport", "iataCode": "LTN" }
+      ],
       "hasOfferCatalog": {
         "@type": "OfferCatalog",
-        "name": "Chauffeur Services",
+        "name": "Executive Chauffeur Services",
         "itemListElement": [
-          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Airport Transfer"}},
-          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Corporate Chauffeur Service"}},
-          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Wedding Transportation"}},
-          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Event Transportation"}},
-          {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Hourly Hire"}}
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Airport Transfer Service" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Corporate Chauffeur Service" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Wedding Chauffeur Service" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Hourly As-Directed Chauffeur" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Private Aviation Chauffeur" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Intercity Chauffeur Service" } }
         ]
       },
+      "paymentAccepted": "Cash, Credit Card, Debit Card, PayPal, RuPay",
+      "currenciesAccepted": "GBP",
+      "numberOfEmployees": {
+        "@type": "QuantitativeValue",
+        "value": 120
+      },
+      "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "reviewCount": "45", "bestRating": "5", "worstRating": "1" },
       "sameAs": [
-        "https://www.trustpilot.com/review/jkexecutivechauffeurs.com"
+        "https://www.facebook.com/profile.php?id=61581449520001",
+        "https://www.instagram.com/jkexecutivechauffeurs?igsh=NnFwN3B0d2Q0NHZk",
+        "https://www.linkedin.com/company/jk-executive-chauffeurs",
+        "https://share.google/09Kot2PXaujfkjnBQ"
       ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "JK Executive Chauffeurs",
+      "url": "https://www.jkexecutivechauffeurs.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://www.jkexecutivechauffeurs.com/?s={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
     }
     </script>`;
 
@@ -409,7 +545,8 @@ app.get("/", async (req, res, next) => {
 // SSR: /blog/:slug — Blog detail page (most important for Google indexing)
 app.get("/blog/:slug", async (req, res, next) => {
   try {
-    const { slug } = req.params;
+    // Strip trailing slash so /blog/my-slug/ resolves identically to /blog/my-slug
+    const slug = req.params.slug.replace(/\/$/, "");
 
     // Skip API-like slugs
     if (slug.startsWith("api")) return next();

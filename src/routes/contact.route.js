@@ -1,5 +1,6 @@
 import express from "express";
-import { submitContactInquiry, submitBulkQuoteRequest, submitCarQuoteRequest } from "../controllers/contactController.js";
+import { submitContactInquiry, submitBulkQuoteRequest, submitCarQuoteRequest, getContactLeads, deleteContactLead } from "../controllers/contactController.js";
+import { protectAdmin } from "../middlewares/adminAuth.js";
 
 const router = express.Router();
 
@@ -11,5 +12,11 @@ router.post("/quote", submitBulkQuoteRequest);
 
 // POST /api/contact/car-quote — individual car quote request
 router.post("/car-quote", submitCarQuoteRequest);
+
+// GET /api/contact/leads — get all contact leads (Admin)
+router.get("/leads", protectAdmin, getContactLeads);
+
+// DELETE /api/contact/leads/:id — delete a contact lead (Admin)
+router.delete("/leads/:id", protectAdmin, deleteContactLead);
 
 export default router;
